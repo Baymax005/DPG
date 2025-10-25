@@ -46,7 +46,7 @@ The Decentralized Payment Gateway (DPG) is built on a **microservices architectu
 
 #### 2.1 Authentication Service
 
-**Technology**: Node.js, Express, JWT, Redis
+**Technology**: Python, FastAPI, JWT, PostgreSQL
 
 **Features**:
 - User registration and login
@@ -96,7 +96,7 @@ GET    /auth/me
 
 #### 2.2 Wallet Service
 
-**Technology**: Node.js, PostgreSQL, Redis
+**Technology**: Python, FastAPI, PostgreSQL, SQLAlchemy
 
 **Features**:
 - Multi-currency fiat wallets (USD, EUR, GBP, etc.)
@@ -230,7 +230,7 @@ WebSocket: wss://api.dpg.com/trading/ws
 
 #### 2.4 Payment Service
 
-**Technology**: Node.js, Stripe, Adyen, PostgreSQL
+**Technology**: Python, FastAPI, Stripe, PostgreSQL
 
 **Features**:
 - Credit/debit card processing

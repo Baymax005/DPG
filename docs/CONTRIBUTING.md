@@ -42,36 +42,44 @@ We are committed to providing a welcoming and inclusive environment for all cont
 
 Before contributing, ensure you have:
 
-- Node.js 18+ installed
-- Docker and Docker Compose
-- PostgreSQL 14+
+- Python 3.10+ installed
+- PostgreSQL 17+
 - Git
 - Code editor (VS Code recommended)
+- Basic knowledge of FastAPI and SQLAlchemy
 
 ### Setting Up Development Environment
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/dpg.git
-cd dpg
+git clone https://github.com/YOUR_USERNAME/DPG.git
+cd DPG
 
 # Add upstream remote
-git remote add upstream https://github.com/dpg-org/dpg.git
+git remote add upstream https://github.com/Baymax005/DPG.git
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
 
 # Install dependencies
-npm install
+pip install -r requirements.txt
 
 # Copy environment variables
 cp .env.example .env
+# Edit .env with your actual credentials
 
-# Start Docker services
-docker-compose up -d
-
-# Run migrations
-npm run migrate
+# Setup database (PostgreSQL must be running)
+# Create database: dpg_dev
 
 # Start development server
-npm run dev
+cd backend
+python main.py
 ```
 
 ---
@@ -137,44 +145,48 @@ git push origin feature/your-feature-name
 
 ## Coding Standards
 
-### TypeScript/JavaScript
+### Python
 
-**Style Guide**: We follow Airbnb JavaScript Style Guide with some modifications.
+**Style Guide**: We follow PEP 8 with some project-specific conventions.
 
-**ESLint Configuration**:
-```javascript
-{
-  "extends": ["airbnb-typescript", "prettier"],
-  "rules": {
-    "no-console": "warn",
-    "no-unused-vars": "error",
-    "prefer-const": "error"
-  }
-}
-```
+**Code Formatting**:
+- Use **Black** for auto-formatting
+- Maximum line length: 88 characters
+- Use type hints where possible
 
 **Best Practices**:
-```typescript
-// ✅ Good
-async function getUserById(id: string): Promise<User | null> {
-  try {
-    const user = await userRepository.findById(id);
-    return user;
-  } catch (error) {
-    logger.error('Failed to fetch user', { id, error });
-    throw new DatabaseError('User retrieval failed');
-  }
-}
+```python
+# ✅ Good
+from typing import Optional
+from models import User
 
-// ❌ Bad
-async function getUserById(id) {
-  const user = await userRepository.findById(id);
-  return user;
-}
+async def get_user_by_id(user_id: int) -> Optional[User]:
+    """
+    Retrieve user by ID.
+    
+    Args:
+        user_id: The user's database ID
+        
+    Returns:
+        User object if found, None otherwise
+    """
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        return user
+    except Exception as e:
+        logger.error(f'Failed to fetch user {user_id}: {e}')
+        raise
+
+# ❌ Bad
+def get_user_by_id(user_id):
+    user = db.query(User).filter(User.id == user_id).first()
+    return user
 ```
 
 **Naming Conventions**:
-- **Variables**: camelCase (`userName`, `totalAmount`)
+- **Variables/Functions**: snake_case (`user_name`, `total_amount`)
+- **Classes**: PascalCase (`User`, `WalletService`)
+- **Constants**: UPPER_SNAKE_CASE (`SECRET_KEY`, `MAX_AMOUNT`)
 - **Constants**: UPPER_SNAKE_CASE (`MAX_RETRIES`, `API_URL`)
 - **Classes**: PascalCase (`UserService`, `PaymentController`)
 - **Files**: kebab-case (`user-service.ts`, `payment-controller.ts`)
@@ -263,32 +275,37 @@ All new code must include unit tests.
 
 **Coverage Requirements**: Minimum 80% code coverage
 
-**Example (Jest)**:
-```typescript
-describe('UserService', () => {
-  describe('createUser', () => {
-    it('should create a new user with valid data', async () => {
-      const userData = {
-        email: 'test@example.com',
-        password: 'SecurePass123!'
-      };
-      
-      const user = await userService.createUser(userData);
-      
-      expect(user).toBeDefined();
-      expect(user.email).toBe(userData.email);
-      expect(user.id).toBeDefined();
-    });
+**Example (pytest)**:
+```python
+import pytest
+from backend.wallet_service import WalletService
+from backend.models import User
+
+def test_create_wallet_with_valid_data(db_session):
+    """Test wallet creation with valid data"""
+    user = User(email='test@example.com', first_name='Test')
+    db_session.add(user)
+    db_session.commit()
     
-    it('should throw error for duplicate email', async () => {
-      const userData = { email: 'existing@example.com', password: 'pass' };
-      
-      await expect(userService.createUser(userData))
-        .rejects
-        .toThrow('Email already exists');
-    });
-  });
-});
+    wallet = WalletService.create_wallet(
+        user_id=user.id,
+        currency_code='USD'
+    )
+    
+    assert wallet is not None
+    assert wallet.currency_code == 'USD'
+    assert wallet.balance == 0
+    
+def test_duplicate_wallet_raises_error(db_session):
+    """Test that duplicate wallet creation raises error"""
+    user = User(email='test@example.com')
+    db_session.add(user)
+    db_session.commit()
+    
+    WalletService.create_wallet(user.id, 'USD')
+    
+    with pytest.raises(ValueError, match='Wallet already exists'):
+        WalletService.create_wallet(user.id, 'USD')
 ```
 
 ### Integration Tests
@@ -302,16 +319,16 @@ Test complete user flows.
 **Running Tests**:
 ```bash
 # Run all tests
-npm test
+python -m pytest
 
 # Run with coverage
-npm run test:coverage
+python -m pytest --cov=backend
 
 # Run specific test file
-npm test -- user-service.test.ts
+python -m pytest tests/test_wallets.py
 
-# Run in watch mode
-npm run test:watch
+# Run in verbose mode
+python -m pytest -v
 ```
 
 ---
@@ -320,8 +337,8 @@ npm run test:watch
 
 ### Before Submitting
 
-- [ ] Code follows style guidelines
-- [ ] All tests pass (`npm test`)
+- [ ] Code follows style guidelines (PEP 8)
+- [ ] All tests pass (`python -m pytest`)
 - [ ] Code coverage meets minimum (80%)
 - [ ] Documentation updated
 - [ ] Commit messages follow convention
@@ -432,28 +449,36 @@ Closes #456
 
 ### Code Comments
 
-```typescript
-/**
- * Calculates the conversion rate between two currencies.
- * 
- * @param fromCurrency - Source currency code (e.g., 'USD')
- * @param toCurrency - Target currency code (e.g., 'BTC')
- * @param amount - Amount to convert
- * @returns Converted amount with fee included
- * @throws {InvalidCurrencyError} If currency is not supported
- */
-async function convertCurrency(
-  fromCurrency: string,
-  toCurrency: string,
-  amount: Decimal
-): Promise<ConversionResult> {
-  // Implementation
-}
+```python
+from decimal import Decimal
+from typing import Dict
+
+async def convert_currency(
+    from_currency: str,
+    to_currency: str,
+    amount: Decimal
+) -> Dict[str, Decimal]:
+    """
+    Calculate the conversion rate between two currencies.
+    
+    Args:
+        from_currency: Source currency code (e.g., 'USD')
+        to_currency: Target currency code (e.g., 'BTC')
+        amount: Amount to convert
+        
+    Returns:
+        Dict containing converted amount and fees
+        
+    Raises:
+        ValueError: If currency is not supported
+    """
+    # Implementation
+    pass
 ```
 
 ### API Documentation
 
-All API endpoints must be documented using OpenAPI/Swagger.
+All API endpoints are automatically documented using FastAPI's built-in Swagger UI.
 
 ### README Updates
 

@@ -94,7 +94,7 @@ DPG is a comprehensive payment gateway that enables users to:
 
 ### Backend
 - **Framework:** FastAPI 0.120.0
-- **Database:** PostgreSQL 15
+- **Database:** PostgreSQL 17
 - **ORM:** SQLAlchemy
 - **Authentication:** JWT (python-jose)
 - **Password Hashing:** bcrypt 4.0.1
@@ -117,7 +117,7 @@ DPG is a comprehensive payment gateway that enables users to:
 
 ### Prerequisites
 - Python 3.13+
-- PostgreSQL 15+
+- PostgreSQL 17+
 
 ### Quick Start
 
