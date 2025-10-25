@@ -11,6 +11,7 @@
 
 ## 📖 Table of Contents
 - [Overview](#overview)
+- [DPG Token](#-dpg-token)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
@@ -18,6 +19,7 @@
 - [API Documentation](#api-documentation)
 - [Project Structure](#project-structure)
 - [Roadmap](#roadmap)
+- [Tokenomics](#tokenomics)
 - [License](#license)
 
 ---
@@ -29,6 +31,15 @@ DPG is a comprehensive payment gateway that enables users to:
 - Perform deposits, withdrawals, and transfers
 - Trade between currencies (planned)
 - Access virtual debit cards (planned)
+- **Earn rewards with $DPG native token** (planned Q2 2026)
+
+### 🪙 DPG Token
+DPG has its own native utility token ($DPG) providing:
+- **Fee Discounts:** Up to 80% off trading fees for holders
+- **Staking Rewards:** Earn 5-15% APY on staked tokens
+- **Governance Rights:** Vote on platform decisions
+- **Airdrops:** Early adopters receive token airdrops
+- See [TOKENOMICS.md](docs/TOKENOMICS.md) for complete details
 - Accept merchant payments (planned)
 
 **Current Status:** ✅ MVP completed with authentication, wallets, and basic transactions.
@@ -484,6 +495,32 @@ This project is built by **Muhammad Ali (@baymax005)**, a 4th semester Computer 
 - Frontend development (HTML/JS)
 
 *Note: This project demonstrates that with the right tools and determination, students can build professional-grade applications. AI tools are used as learning accelerators, not replacements for understanding.*
+
+---
+
+## 🪙 Tokenomics
+
+DPG will launch its native utility token **$DPG** in Q2 2026:
+
+**Token Supply:** 1,000,000,000 (1 Billion) $DPG
+
+**Distribution:**
+- 30% Community & Airdrops (early adopters rewarded!)
+- 20% Development & Operations
+- 20% Liquidity & Exchange Listings
+- 15% Team (4-year vesting)
+- 15% Reserve & Ecosystem
+
+**Utility:**
+- 📉 Up to 80% fee discounts
+- 💰 Staking rewards (5-15% APY)
+- 🗳️ Governance voting rights
+- 🎁 Monthly airdrops for active users
+- ⭐ Exclusive features & priority support
+
+**Fair Launch:** No pre-sale, no private rounds - everyone starts equal!
+
+📖 **Complete Details:** See [docs/TOKENOMICS.md](docs/TOKENOMICS.md)
 
 ---
 
