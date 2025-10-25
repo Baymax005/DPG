@@ -1,0 +1,117 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+build/
+*.log
+*.tgz
+
+# Environment files (CRITICAL - NEVER COMMIT!)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+temp_deps.txt
+
+# IDEs (keeping .vscode/settings.json for Python path)
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/
+postgres_data/
+mongodb_data/
+redis_data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Certificates
+*.pem
+*.key
+*.crt
+
+# Secrets
+secrets/
+*.secret
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Blockchain
+*.keystore
+wallets/
+
+# Mobile
+*.apk
+*.ipa
+*.app
+*.dSYM.zip
+*.dSYM
+*.xcuserstate
+*.xcworkspace
+
+# iOS
+frontend/mobile/ios/Pods/
+frontend/mobile/ios/build/
+
+# Android
+frontend/mobile/android/build/
+frontend/mobile/android/.gradle/
+frontend/mobile/android/app/build/
+
+# Backup files
+*.backup
+*.bak
