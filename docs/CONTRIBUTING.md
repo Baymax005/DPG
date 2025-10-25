@@ -497,7 +497,7 @@ Update README.md if your changes affect:
 **DO NOT** create public issues for security vulnerabilities.
 
 Instead:
-1. Email: security@dpg.com
+1. Email: security@[domain-tbd]
 2. Include detailed description
 3. Provide steps to reproduce
 4. Suggest a fix if possible
@@ -517,7 +517,7 @@ Instead:
 
 - **Discord**: Join our [Discord server](https://discord.gg/dpg)
 - **GitHub Discussions**: Ask questions in [Discussions](https://github.com/dpg-org/dpg/discussions)
-- **Email**: dev@dpg.com
+- **Email**: dev@[domain-tbd]
 
 ---
 

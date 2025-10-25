@@ -285,11 +285,11 @@ To increase scarcity over time:
 
 ## 📚 Resources
 
-- **Website:** dpg.io (Coming Soon)
+- **Website:** [Coming Soon]
 - **Whitepaper:** [Link TBD]
 - **Smart Contract:** [Link TBD]
 - **Audit Report:** [Link TBD]
-- **Twitter:** @DPG_Official (Coming Soon)
+- **Twitter:** [To be announced]
 - **Discord:** [Link TBD]
 - **Telegram:** [Link TBD]
 

@@ -202,7 +202,7 @@ Security is our top priority. DPG implements:
 - **Bug Bounty Program**: Rewards for responsible disclosure
 - **Compliance**: PCI DSS Level 1, SOC 2 Type II, GDPR compliant
 
-**Report security vulnerabilities**: security@dpg.com
+**Report security vulnerabilities**: [Contact details will be provided upon launch]
 
 ---
 

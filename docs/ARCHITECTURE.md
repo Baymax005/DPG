@@ -223,7 +223,7 @@ POST   /trading/orders
 GET    /trading/orders/:id
 DELETE /trading/orders/:id
 GET    /trading/trades
-WebSocket: wss://api.dpg.com/trading/ws
+WebSocket: wss://api.[domain]/trading/ws
 ```
 
 ---
