@@ -2,19 +2,23 @@
 
 ## System Overview
 
-The Decentralized Payment Gateway (DPG) is built on a **microservices architecture** that ensures scalability, maintainability, and resilience. The system is designed to handle millions of concurrent users and process billions of dollars in transactions annually.
+The Decentralized Payment Gateway (DPG) is built on a **hybrid centralized-decentralized architecture** that combines the security of blockchain with the speed of traditional databases. This ensures scalability, performance, and transparency while handling millions of concurrent users and processing billions of dollars in transactions annually.
+
+> **See [HYBRID_ARCHITECTURE.md](./HYBRID_ARCHITECTURE.md)** for detailed explanation of our centralized + decentralized approach.
 
 ---
 
 ## Architecture Principles
 
-1. **Microservices**: Independent, loosely coupled services
-2. **Event-Driven**: Asynchronous communication via message queues
-3. **API-First**: All services expose well-documented APIs
-4. **Cloud-Native**: Designed for containerization and orchestration
-5. **Security by Design**: Security integrated at every layer
-6. **High Availability**: 99.9%+ uptime through redundancy
-7. **Scalability**: Horizontal scaling for all services
+1. **Hybrid Architecture**: Blockchain for custody, database for trading (see HYBRID_ARCHITECTURE.md)
+2. **Microservices**: Independent, loosely coupled services
+3. **Event-Driven**: Asynchronous communication via message queues
+4. **API-First**: All services expose well-documented APIs
+5. **Cloud-Native**: Designed for containerization and orchestration
+6. **Security by Design**: Security integrated at every layer
+7. **High Availability**: 99.9%+ uptime through redundancy
+8. **Scalability**: Horizontal scaling for all services
+9. **Transparency**: Daily proof of reserves via Merkle trees
 
 ---
 
@@ -148,15 +152,25 @@ POST   /wallets/:id/transfer
 
 **Technology**: Python, FastAPI, Redis, WebSocket
 
+**Architecture**: Hybrid centralized-decentralized (see HYBRID_ARCHITECTURE.md)
+
 **Features**:
-- Order book management
-- Matching engine (FIFO, Pro-rata)
+- Order book management (centralized for speed)
+- Matching engine (FIFO, Pro-rata) - **<10ms execution**
 - Order types (market, limit, stop-loss, take-profit)
 - Trading pairs (50+ pairs)
 - Real-time price feeds
-- Trade execution
+- Trade execution (database, not blockchain)
 - Fee calculation
 - Position tracking
+- Daily settlement to blockchain (Merkle tree proof)
+
+**Why Centralized Trading**:
+- ✅ Instant execution (<10ms vs 15 sec on blockchain)
+- ✅ FREE trades (no gas fees)
+- ✅ High throughput (100K+ orders/sec)
+- ✅ Professional trading UX
+- ✅ Daily proof of reserves for transparency
 
 **Order Matching Algorithm**:
 ```python
@@ -262,24 +276,34 @@ POST   /payments/refund
 
 #### 2.5 Blockchain Service
 
-**Technology**: Node.js, Python, ethers.js, web3.js
+**Technology**: Python, ethers.js, web3.py
+
+**Architecture**: Blockchain for custody and settlement (see HYBRID_ARCHITECTURE.md)
 
 **Features**:
-- Blockchain node management (BTC, ETH, etc.)
-- Wallet address generation
+- Blockchain node management (BTC, ETH, Polygon, etc.)
+- Wallet address generation (HD wallets)
 - Transaction broadcasting
-- Transaction confirmation monitoring
+- Deposit detection and confirmation monitoring
+- Withdrawal processing
 - Gas fee estimation
-- Smart contract interaction
+- Smart contract interaction (custody, proof of reserves)
 - Token balance queries
+- **Daily Merkle tree settlement** (proof of reserves)
 
 **Supported Networks**:
 - Bitcoin (BTC)
 - Ethereum (ETH)
-- Polygon (MATIC)
+- Polygon (MATIC) - Primary L2 for low fees
 - Binance Smart Chain (BNB)
-- ERC-20 tokens
+- ERC-20 tokens (USDT, USDC)
 - BEP-20 tokens
+
+**Custody Model**:
+- **Deposits**: User sends crypto → Smart contract custodies → Database balance updated
+- **Trading**: Happens in database (instant, free)
+- **Withdrawals**: Database balance checked → Smart contract releases crypto → Sent to user
+- **Settlement**: Daily Merkle tree proof published on-chain
 
 **Architecture**:
 ```
@@ -317,7 +341,7 @@ GET    /blockchain/gas/estimate
 
 #### 2.6 Conversion Service
 
-**Technology**: Node.js, Redis, PostgreSQL
+**Technology**: Python, FastAPI, Redis, PostgreSQL
 
 **Features**:
 - Real-time exchange rates
@@ -327,22 +351,21 @@ GET    /blockchain/gas/estimate
 - Fee calculation
 - Slippage management
 - Conversion limits
-- Price oracles integration
+- Price oracles integration (CoinGecko, CoinMarketCap, Binance)
 
 **Price Aggregation**:
-```javascript
-class PriceAggregator {
-  async getPrice(base, quote) {
-    const prices = await Promise.all([
-      this.coinGecko.getPrice(base, quote),
-      this.coinMarketCap.getPrice(base, quote),
-      this.binance.getPrice(base, quote)
-    ]);
-    
-    // Calculate median to avoid outliers
-    return this.calculateMedian(prices);
-  }
-}
+```python
+class PriceAggregator:
+    async def get_price(self, base: str, quote: str) -> Decimal:
+        """Get median price from multiple sources to avoid outliers"""
+        prices = await asyncio.gather(
+            self.coingecko.get_price(base, quote),
+            self.coinmarketcap.get_price(base, quote),
+            self.binance.get_price(base, quote)
+        )
+        
+        # Calculate median to avoid outliers
+        return self.calculate_median(prices)
 ```
 
 **APIs**:
@@ -357,7 +380,7 @@ PUT    /conversion/limits
 
 #### 2.7 Card Service
 
-**Technology**: Node.js, Marqeta/Galileo API
+**Technology**: Python, FastAPI, Marqeta/Galileo API
 
 **Features**:
 - Virtual card generation
@@ -389,7 +412,7 @@ PUT    /cards/:id/limits
 
 #### 2.8 Merchant Service
 
-**Technology**: Node.js, Express, PostgreSQL
+**Technology**: Python, FastAPI, PostgreSQL
 
 **Features**:
 - Business account management
@@ -399,7 +422,7 @@ PUT    /cards/:id/limits
 - Webhook management
 - Settlement reporting
 - Multi-user access control
-- E-commerce plugins
+- E-commerce plugins (WooCommerce, Shopify, Magento)
 
 **APIs**:
 ```
@@ -417,15 +440,16 @@ POST   /merchant/webhooks
 
 #### 3.1 Notification Service
 
-**Technology**: Node.js, SendGrid, Twilio, FCM
+**Technology**: Python, FastAPI, SendGrid, Twilio, Firebase Cloud Messaging
 
 **Features**:
-- Email notifications
-- SMS notifications
-- Push notifications (mobile)
+- Email notifications (SendGrid)
+- SMS notifications (Twilio)
+- Push notifications (Firebase - mobile apps)
 - In-app notifications
 - Webhook delivery
 - Template management
+- Notification preferences
 
 ---
 
@@ -444,14 +468,15 @@ POST   /merchant/webhooks
 
 #### 3.3 Compliance Service
 
-**Technology**: Node.js, Python, ML models
+**Technology**: Python, FastAPI, scikit-learn (ML models), PostgreSQL
 
 **Features**:
-- KYC verification (Jumio, Onfido)
-- AML transaction monitoring
-- Sanctions screening
+- KYC verification (Jumio, Onfido integration)
+- AML transaction monitoring (machine learning-based)
+- Sanctions screening (OFAC, UN lists)
 - Suspicious activity detection
-- Regulatory reporting
+- Regulatory reporting (FinCEN, FATF)
+- Risk scoring algorithms
 
 ---
 
@@ -598,17 +623,23 @@ All services are stateless and can scale horizontally:
 
 | Component | Technology | Reasoning |
 |-----------|-----------|-----------|
-| API Gateway | Kong | Feature-rich, scalable, plugin ecosystem |
-| Backend | Node.js | Async I/O, npm ecosystem, JavaScript everywhere |
-| Trading Engine | Python | Performance for numerical computation |
-| Database | PostgreSQL | ACID compliance, complex queries, JSON support |
-| Cache | Redis | Speed, pub/sub, data structures |
-| Message Queue | Kafka | High throughput, durability, scalability |
+| API Gateway | Kong / FastAPI | Feature-rich, scalable, Python ecosystem |
+| Backend | **Python/FastAPI** | Async I/O, type safety, performance, ML integration |
+| Trading Engine | Python + Redis | Performance for numerical computation, real-time order book |
+| Database | **PostgreSQL 17+** | ACID compliance, complex queries, JSON support, proven at scale |
+| Cache | Redis | Speed, pub/sub, real-time data structures |
+| Message Queue | Kafka / RabbitMQ | High throughput, durability, scalability |
+| Blockchain | **Ethereum + Polygon** | Smart contracts, ERC-20 support, low fees on L2 |
 | Container Orchestration | Kubernetes | Industry standard, auto-scaling, self-healing |
-| Cloud Provider | AWS | Comprehensive services, reliability, global presence |
+| Cloud Provider | **DigitalOcean** (Student Pack $200) → AWS (production) | Cost-effective for MVP, scalable for production |
+
+**Architecture Model**: **Hybrid Centralized-Decentralized** (see [HYBRID_ARCHITECTURE.md](./HYBRID_ARCHITECTURE.md))
+- Blockchain: Deposits, withdrawals, custody, proof of reserves
+- Database: Trading, internal transfers, instant operations
+- Settlement: Daily Merkle tree sync to blockchain
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: October 25, 2025  
-**Next Review**: Quarterly
+**Version**: 2.0 (Updated for Hybrid Architecture)  
+**Last Updated**: October 27, 2025  
+**Next Review**: Before Testnet Launch (Nov 7, 2025)
