@@ -19,9 +19,14 @@ if not DATABASE_URL:
 # Uncomment this if you don't have PostgreSQL yet
 # DATABASE_URL = "sqlite:///./dpg.db"
 
-# Create engine
+# Create engine with connection pooling for performance
 engine = create_engine(
     DATABASE_URL,
+    pool_size=20,          # Keep 20 connections alive
+    max_overflow=10,       # Allow 10 extra connections during peak
+    pool_pre_ping=True,    # Verify connections before use
+    pool_recycle=3600,     # Recycle connections every hour
+    echo=False             # Set to True for SQL query logging
     # For SQLite, use:
     # connect_args={"check_same_thread": False}
 )
