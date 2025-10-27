@@ -9,10 +9,16 @@
 
 ### Current Status
 - 🚧 **Status:** Planning & Design (Pre-launch)
-- 📅 **Expected Launch:** Q2 2026 (subject to change)
+- 📅 **Testnet Launch:** Nov 6-8, 2025 (Sepolia testnet - FREE testing)
+- 📅 **Mainnet Launch:** Q1 2026 (After security audit - REAL launch)
 - ⚠️ **Subject to Change:** All details may be modified based on regulatory requirements, market conditions, and community feedback
 - ⚠️ **Not Investment Advice:** This document is for informational purposes only and does not constitute financial, investment, or legal advice
-- 🔒 **No Tokens Exist Yet:** The $DPG token has not been created or deployed. This is documentation of future plans only.
+- 🔒 **Testnet First:** Token will be deployed on Sepolia testnet for testing before mainnet launch
+
+**Deployment Phases:**
+1. **Testnet (Nov 6-8, 2025)** - Deploy on Sepolia for FREE testing
+2. **Security Audit (Nov 15-30)** - Professional smart contract audit
+3. **Mainnet (Q1 2026)** - Real launch on Ethereum mainnet after audit passes
 
 **DO NOT purchase any tokens claiming to be $DPG at this time. Any such tokens are fraudulent.**
 
@@ -292,6 +298,50 @@ To increase scarcity over time:
 - **Twitter:** [To be announced]
 - **Discord:** [Link TBD]
 - **Telegram:** [Link TBD]
+
+---
+
+## 🧪 Why Testnet First?
+
+**Testnet deployment is CRITICAL before mainnet launch. Here's why:**
+
+### Benefits of Testnet Deployment:
+1. **FREE Testing** - No real money required, use testnet ETH from faucets
+2. **Bug Detection** - Find and fix smart contract bugs before mainnet
+3. **Security Testing** - Test for vulnerabilities without financial risk
+4. **User Feedback** - Let community test features and provide feedback
+5. **Gas Optimization** - Optimize contract to minimize mainnet costs
+6. **Integration Testing** - Test token with DPG platform thoroughly
+
+### Testnet vs Mainnet:
+
+| Feature | Testnet (Sepolia) | Mainnet (Ethereum) |
+|---------|-------------------|-------------------|
+| **Cost** | FREE (testnet ETH) | Real ETH ($$$) |
+| **Risk** | Zero | High |
+| **Mistakes** | Can redeploy anytime | Permanent |
+| **Testing** | Unlimited | Expensive |
+| **Users** | Developers only | Real users |
+| **Value** | No real value | Real money |
+
+### Deployment Timeline:
+
+```
+Nov 6-8, 2025: Testnet (Sepolia)
+    ↓ Test everything
+    ↓ Fix bugs
+    ↓ Get feedback
+Nov 15-30: Security Audit ($1000-5000)
+    ↓ Professional review
+    ↓ Fix critical issues
+    ↓ Penetration testing
+Q1 2026: Mainnet Launch (REAL)
+    ↓ Deploy audited contract
+    ↓ Fair launch
+    ↓ Community airdrop
+```
+
+**Never skip testnet!** Most crypto hacks happen because projects rushed to mainnet without proper testing.
 
 ---
 

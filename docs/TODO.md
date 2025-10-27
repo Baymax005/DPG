@@ -117,6 +117,38 @@ Wallet Cards:
 - [ ] Test sending USDT/USDC on testnet
 - [ ] Update UI to show token balances
 
+### $DPG Token Deployment (Testnet First!) 🪙
+**Deadline:** Nov 6-8, 2025
+
+**Phase 1: Testnet Deployment (Nov 6-7)**
+- [ ] Write ERC-20 smart contract for $DPG token
+- [ ] Add staking logic to contract
+- [ ] Add fee discount logic
+- [ ] Test contract on Remix IDE
+- [ ] Deploy to Sepolia testnet (FREE)
+- [ ] Verify contract on Sepolia Etherscan
+- [ ] Mint test tokens (1B supply)
+- [ ] Test token transfers
+- [ ] Test staking functionality
+- [ ] Test fee discounts
+
+**Phase 2: Testnet Integration (Nov 7-8)**
+- [ ] Add $DPG token to DPG platform
+- [ ] Show $DPG balance in dashboard
+- [ ] Allow users to stake $DPG
+- [ ] Calculate fee discounts based on holdings
+- [ ] Test reward distribution
+- [ ] Get community feedback
+
+**Phase 3: Mainnet (After Nov 15 - POST AUDIT ONLY)**
+- [ ] Security audit ($1000-5000)
+- [ ] Fix all audit findings
+- [ ] Legal review ($500-1000)
+- [ ] Deploy to Ethereum mainnet (REAL money)
+- [ ] Verify on Etherscan
+- [ ] Fair launch announcement
+- [ ] Community airdrop (30% of supply)
+
 ### Polygon Integration 🟣
 **Deadline:** Nov 8, 2025
 
