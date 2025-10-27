@@ -227,23 +227,36 @@ async def send_to_address(
         # Get blockchain service for the specified network
         blockchain = get_blockchain_service(send_data.network)
         
-        # Get master wallet private key from environment
-        private_key = os.getenv('MASTER_WALLET_PRIVATE_KEY')
-        if not private_key:
+        # Check if wallet has blockchain address and private key
+        if not wallet.address or not wallet.private_key_encrypted:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Blockchain not configured. Contact administrator."
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This wallet doesn't have a blockchain address. Please create a crypto wallet first."
             )
         
+        # Decrypt user's private key
+        from wallet_service import decrypt_private_key
+        private_key = decrypt_private_key(wallet.private_key_encrypted)
+        
+        # Get wallet's actual blockchain balance
+        blockchain_balance = blockchain.get_balance(wallet.address)
+        
         # Estimate gas fee first
-        master_account_address = blockchain.w3.eth.account.from_key(private_key).address
         gas_estimate = blockchain.estimate_gas_fee(
-            from_address=master_account_address,
+            from_address=wallet.address,
             to_address=send_data.to_address,
             amount=amount
         )
         
-        # Send blockchain transaction
+        # Check if user has enough ETH for amount + gas
+        total_needed = amount + Decimal(gas_estimate['total_fee_eth'])
+        if blockchain_balance < total_needed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient blockchain balance. You have {blockchain_balance} ETH but need {total_needed} ETH (including gas fee of {gas_estimate['total_fee_eth']} ETH). Please deposit testnet ETH first."
+            )
+        
+        # Send blockchain transaction using USER's wallet
         tx_result = blockchain.send_transaction(
             private_key=private_key,
             to_address=send_data.to_address,
@@ -265,9 +278,8 @@ async def send_to_address(
             created_at=datetime.utcnow()
         )
         
-        # Deduct from wallet balance (including gas fee)
-        total_deducted = amount + Decimal(gas_estimate['total_fee_eth'])
-        wallet.balance -= total_deducted
+        # Update database balance to match blockchain (sync)
+        wallet.balance = blockchain_balance - total_needed
         
         db.add(transaction)
         db.commit()

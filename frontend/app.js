@@ -239,16 +239,30 @@ function displayWallets() {
     
     container.innerHTML = wallets.map(wallet => `
         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-            <div class="flex justify-between items-center">
-                <div>
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex-1">
                     <h4 class="font-bold text-lg">${wallet.currency_code}</h4>
                     <p class="text-sm text-gray-500">${wallet.wallet_type}</p>
-                    ${wallet.address ? `<p class="text-xs text-gray-400 mt-1">${wallet.address.substring(0, 20)}...</p>` : ''}
+                    ${wallet.address ? `<p class="text-xs text-gray-400 mt-1 font-mono">${wallet.address.substring(0, 15)}...${wallet.address.substring(wallet.address.length - 8)}</p>` : ''}
                 </div>
                 <div class="text-right">
-                    <p class="text-2xl font-bold text-green-600">${parseFloat(wallet.balance).toFixed(2)}</p>
+                    <p class="text-2xl font-bold text-green-600">${parseFloat(wallet.balance).toFixed(4)}</p>
                     <p class="text-sm text-gray-500">${wallet.currency_code}</p>
                 </div>
+            </div>
+            <div class="flex gap-2">
+                ${wallet.wallet_type === 'crypto' && wallet.address ? `
+                    <button onclick="syncWalletBalance('${wallet.id}')" 
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded">
+                        🔄 Sync Balance
+                    </button>
+                ` : ''}
+                ${parseFloat(wallet.balance) === 0 ? `
+                    <button onclick="deleteWallet('${wallet.id}')" 
+                            class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded">
+                        🗑️ Delete
+                    </button>
+                ` : ''}
             </div>
         </div>
     `).join('');
@@ -274,6 +288,16 @@ function showCreateWallet() {
 
 function hideCreateWallet() {
     document.getElementById('createWalletModal').classList.add('hidden');
+}
+
+// Import Wallet Modal
+function showImportWallet() {
+    document.getElementById('importWalletModal').classList.remove('hidden');
+}
+
+function hideImportWallet() {
+    document.getElementById('importWalletModal').classList.add('hidden');
+    document.getElementById('importPrivateKey').value = '';
 }
 
 async function createWallet() {
@@ -309,6 +333,49 @@ async function createWallet() {
         }
     } catch (error) {
         alert('Error creating wallet');
+    }
+}
+
+// Import Wallet function
+async function importWallet() {
+    const currency = document.getElementById('importWalletCurrency').value;
+    const privateKey = document.getElementById('importPrivateKey').value.trim();
+    
+    if (!privateKey) {
+        alert('Please enter your private key');
+        return;
+    }
+    
+    if (!privateKey.startsWith('0x') || privateKey.length !== 66) {
+        alert('Invalid private key format. Must start with 0x and be 66 characters long.');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/v1/wallets/import`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                currency_code: currency,
+                private_key: privateKey
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            hideImportWallet();
+            await loadWallets();
+            alert(`✅ Wallet imported successfully!\n\nAddress: ${data.address}\nBalance: ${data.balance} ${currency}`);
+        } else {
+            alert(`❌ ${data.detail || 'Failed to import wallet'}`);
+        }
+    } catch (error) {
+        console.error('Import error:', error);
+        alert('❌ Error importing wallet. Check your private key and try again.');
     }
 }
 
@@ -824,4 +891,59 @@ function showError(elementId, message) {
     errorDiv.textContent = message;
     errorDiv.classList.remove('hidden');
     setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+}
+
+// Sync wallet balance from blockchain
+async function syncWalletBalance(walletId) {
+    try {
+        const response = await fetch(`${API_URL}/api/v1/wallets/${walletId}/sync-blockchain`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`✅ ${data.message}\n\nAddress: ${data.address}\nBalance: ${data.balance} ${data.currency}\nNetwork: ${data.network}`);
+            // Reload wallets to show updated balance
+            await loadWallets();
+        } else {
+            alert(`❌ Error: ${data.detail}`);
+        }
+    } catch (error) {
+        console.error('Sync error:', error);
+        alert('❌ Failed to sync wallet balance');
+    }
+}
+
+// Delete wallet
+async function deleteWallet(walletId) {
+    if (!confirm('Are you sure you want to delete this wallet? This cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/v1/wallets/${walletId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert('✅ Wallet deleted successfully');
+            await loadWallets();
+        } else {
+            const data = await response.json();
+            alert(`❌ ${data.detail || 'Failed to delete wallet'}`);
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert(`❌ Failed to delete wallet: ${error.message}`);
+    }
 }

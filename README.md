@@ -2,8 +2,8 @@
 
 **A modern payment gateway bridging traditional finance with cryptocurrency**
 
-![Status](https://img.shields.io/badge/Status-MVP%20Complete-green)
-![Version](https://img.shields.io/badge/Version-1.0.0--MVP-blue)
+![Status](https://img.shields.io/badge/Status-Blockchain%20Integrated-brightgreen)
+![Version](https://img.shields.io/badge/Version-0.2.0--Beta-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.120.0-009688)
 
@@ -42,15 +42,17 @@ DPG has its own native utility token ($DPG) providing:
 - See [TOKENOMICS.md](docs/TOKENOMICS.md) for complete details
 - Accept merchant payments (planned)
 
-**Current Status:** ✅ MVP completed with authentication, wallets, and basic transactions.
+**Current Status:** ✅ Real blockchain integration complete! Import wallets, send real crypto on Sepolia testnet.
 
-**See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for detailed progress tracking.**
+**See [docs/BLOCKCHAIN_SETUP.md](./docs/BLOCKCHAIN_SETUP.md) for blockchain integration guide.**  
+**See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for detailed progress tracking.**  
+**See [CHANGELOG.md](./CHANGELOG.md) for latest updates (v0.2.0).**
 
 ---
 
 ## ✨ Features
 
-### ✅ Implemented (v1.0.0-MVP)
+### ✅ Implemented (v0.2.0 - Blockchain Integrated!)
 
 #### User Authentication
 - Email/password registration with validation
@@ -62,37 +64,50 @@ DPG has its own native utility token ($DPG) providing:
 #### Multi-Currency Wallets
 - **Fiat:** USD
 - **Crypto:** ETH, MATIC, USDT, USDC
-- Ethereum wallet generation with Web3.py
+- **Import existing wallets** (MetaMask, Trust Wallet, etc.)
+- **Real blockchain integration** with Web3.py 7.14.0
 - Private key encryption (Fernet)
-- Balance tracking
+- **Sync balance from blockchain** (Sepolia testnet)
 - Wallet creation/deletion
+- Delete empty wallets
+
+#### Blockchain Transactions
+- **Real crypto sends** on Sepolia testnet (ETH, MATIC)
+- Gas fee estimation before sending
+- Transaction hash tracking
+- Etherscan verification links
+- User's wallet private key signing (not master wallet)
+- Address validation (checksum addresses)
 
 #### Transactions
-- **Deposits:** Instant, 0% fee
-- **Withdrawals:** 0.5% fee for crypto
+- **Real blockchain sends:** Send ETH/MATIC to any address
 - Transaction history with status tracking
-- Reference ID support (Stripe integration ready)
+- Reference ID support
+- Gas fee display
 
 #### Frontend UI
 - Responsive design (Tailwind CSS)
 - Login/Registration with tab switching
 - Dashboard with wallet overview
+- **Import Wallet modal** with security warnings
 - Create wallet modal
-- Deposit/Withdraw modals
+- Send crypto with address input
+- **Sync balance button** (fetch from blockchain)
 - Real-time transaction history
 - Form validation & error handling
 - Enter key support
 
 ### 🚧 In Progress
-- [ ] Stress testing
-- [ ] Transfer between wallets
+- [ ] Transaction status tracking (Pending → Confirmed)
+- [ ] ERC-20 token support (USDT, USDC)
 - [ ] Email verification
-- [ ] Blockchain testnet integration
 
 ### 📋 Planned Features
+- Mainnet deployment (after security audit)
+- Polygon Mumbai testnet support
+- Multi-currency swap (DEX integration)
 - Stripe payment integration
 - KYC verification system
-- Cryptocurrency trading
 - Virtual debit cards
 - Merchant accounts
 - Mobile app
@@ -105,12 +120,14 @@ DPG has its own native utility token ($DPG) providing:
 
 ### Backend
 - **Framework:** FastAPI 0.120.0
-- **Database:** PostgreSQL 17
+- **Database:** PostgreSQL 17 (dpg_user/dpg_payment_gateway)
 - **ORM:** SQLAlchemy
 - **Authentication:** JWT (python-jose)
-- **Password Hashing:** bcrypt 4.0.1
+- **Password Hashing:** bcrypt 4.2.0
 - **Blockchain:** Web3.py 7.14.0, eth-account 0.13.7
 - **Encryption:** cryptography 46.0.3 (Fernet)
+- **RPC Provider:** Infura (Sepolia testnet)
+- **Networks:** Ethereum Sepolia, Polygon Mumbai (planned)
 
 ### Frontend
 - **HTML5 + Vanilla JavaScript**
@@ -135,22 +152,43 @@ DPG has its own native utility token ($DPG) providing:
 1. **Clone & Setup:**
 ```bash
 cd "C:\Users\muham\OneDrive\Desktop\OTHER LANGS\DPG"
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv venv_new
+.\venv_new\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
 2. **Configure Database:**
-Create database in PostgreSQL:
+Create PostgreSQL user and database:
 ```sql
-CREATE DATABASE dpg_dev;
+-- As postgres superuser:
+CREATE USER dpg_user WITH PASSWORD 'dpg_secure_password_2024';
+CREATE DATABASE dpg_payment_gateway OWNER dpg_user;
+GRANT ALL PRIVILEGES ON DATABASE dpg_payment_gateway TO dpg_user;
 ```
 
 3. **Environment Variables:**
 Copy `.env.example` to `.env` and fill in your values:
 ```bash
 cp .env.example .env
-# Then edit .env with your actual credentials
+```
+
+Required `.env` settings:
+```env
+# Database
+DATABASE_URL=postgresql://dpg_user:dpg_secure_password_2024@localhost/dpg_payment_gateway
+
+# JWT
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# Wallet Encryption
+WALLET_ENCRYPTION_KEY=your-32-byte-fernet-key-here
+
+# Blockchain (Infura)
+INFURA_API_KEY=your-infura-api-key
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/your-infura-api-key
+MUMBAI_RPC_URL=https://polygon-mumbai.infura.io/v3/your-infura-api-key
 ```
 
 4. **Start Server:**
@@ -163,6 +201,8 @@ Server runs at: `http://localhost:9000`
 5. **Open Frontend:**
 - Double-click `frontend/index.html`
 - OR use Live Server on port 5500
+
+**📖 Detailed blockchain setup:** See [docs/BLOCKCHAIN_SETUP.md](./docs/BLOCKCHAIN_SETUP.md)
 
 ---
 
@@ -177,28 +217,40 @@ Server runs at: `http://localhost:9000`
    - First Name
    - Last Name
 
-### Create Wallet
+### Import Existing Wallet (NEW! 🔥)
+1. Login to dashboard
+2. Click "Import Wallet"
+3. Select currency (ETH or MATIC)
+4. **Enter your private key** (from MetaMask, Trust Wallet, etc.)
+5. Wallet imported with real blockchain balance!
+
+**⚠️ Security Note:** Private keys are encrypted with Fernet before storage. NEVER share your private key!
+
+### Create New Wallet
 1. Login to dashboard
 2. Click "Create New Wallet"
 3. Select currency (USD, ETH, MATIC, USDT, USDC)
-4. Wallet created instantly
+4. Wallet created with new address (starts with 0 balance)
 
-### Deposit Funds
-1. Click "Deposit Funds"
-2. Select wallet
-3. Enter amount
-4. Submit (instant, 0% fee)
+### Send Crypto (Real Blockchain!)
+1. Click "Send Crypto" or click Send on any wallet card
+2. Select wallet to send FROM
+3. Enter recipient address (any valid Ethereum address)
+4. Enter amount (checks for sufficient balance + gas fees)
+5. Submit - transaction sent to Sepolia testnet!
+6. Get transaction hash and Etherscan link
 
-### Withdraw Funds
-1. Click "Withdraw Funds"
-2. Select wallet
-3. Enter amount
-4. Submit (0.5% fee for crypto)
+### Sync Blockchain Balance
+1. Find your imported wallet
+2. Click "Sync Balance" button
+3. Fetches real-time balance from blockchain
 
 ### View Transactions
 - Click "View Transactions"
-- Auto-refreshes after each action
-- Shows type, amount, fee, status, date
+- Shows transaction type, amount, fee, status, date
+- Includes transaction hashes for blockchain verification
+
+**📖 Complete guide:** See [docs/BLOCKCHAIN_SETUP.md](./docs/BLOCKCHAIN_SETUP.md)
 
 ---
 
@@ -241,6 +293,18 @@ Authorization: Bearer <token>
 
 #### Wallets
 ```bash
+# Import Wallet (NEW!)
+POST /api/v1/wallets/import
+Authorization: Bearer <token>
+{
+  "currency_code": "ETH",
+  "private_key": "0xYourPrivateKeyHere..."
+}
+
+# Sync Blockchain Balance
+POST /api/v1/wallets/{wallet_id}/sync-blockchain
+Authorization: Bearer <token>
+
 # Create Wallet
 POST /api/v1/wallets/create
 Authorization: Bearer <token>
@@ -264,23 +328,16 @@ Authorization: Bearer <token>
 
 #### Transactions
 ```bash
-# Deposit
-POST /api/v1/transactions/deposit
+# Send Crypto (Real Blockchain!)
+POST /api/v1/transactions/send
 Authorization: Bearer <token>
 {
-  "wallet_id": "uuid",
-  "amount": 1000.00,
-  "description": "Initial deposit"
+  "from_wallet_id": "uuid",
+  "to_address": "0xRecipientAddress...",
+  "amount": 0.01,
+  "description": "Payment"
 }
-
-# Withdraw
-POST /api/v1/transactions/withdraw
-Authorization: Bearer <token>
-{
-  "wallet_id": "uuid",
-  "amount": 100.00,
-  "description": "Withdrawal"
-}
+# Returns: { "tx_hash": "0x...", "etherscan_url": "https://sepolia.etherscan.io/tx/0x..." }
 
 # Transaction History
 GET /api/v1/transactions/history?limit=20
@@ -304,14 +361,15 @@ DPG/
 │   ├── schemas.py              # Pydantic schemas for validation
 │   ├── auth_routes.py          # Authentication endpoints
 │   ├── auth_utils.py           # Auth utilities (JWT, hashing)
-│   ├── wallet_routes.py        # Wallet management endpoints
-│   ├── wallet_service.py       # Wallet business logic
-│   ├── transaction_routes.py   # Transaction endpoints
-│   └── transaction_service.py  # Transaction business logic
+│   ├── wallet_routes.py        # Wallet management (import, sync, delete)
+│   ├── wallet_service.py       # Wallet business logic + encryption
+│   ├── transaction_routes.py   # Transaction endpoints (send crypto)
+│   ├── transaction_service.py  # Transaction business logic
+│   └── blockchain_service.py   # ⭐ NEW: Web3.py integration (400+ lines)
 │
 ├── frontend/
-│   ├── index.html              # Main UI (login, dashboard, modals)
-│   └── app.js                  # Frontend JavaScript (API calls)
+│   ├── index.html              # Main UI (login, dashboard, import modal)
+│   └── app.js                  # Frontend JS (import wallet, sync balance)
 │
 ├── tests/
 │   ├── test_register.py        # Registration tests
@@ -324,21 +382,19 @@ DPG/
 │   └── view_users.py           # User listing utility
 │
 ├── docs/                       # 📚 All Documentation
+│   ├── BLOCKCHAIN_SETUP.md     # ⭐ Blockchain integration guide (NEW!)
 │   ├── PROJECT_STATUS.md       # ⭐ Detailed progress tracker
-│   ├── TODO.md                 # ⭐ Task list & priorities
+│   ├── TODO.md                 # ⭐ Task list & priorities (UPDATED!)
 │   ├── QUICK_REFERENCE.md      # ⭐ Quick commands & tips
 │   ├── WORKSPACE_SUMMARY.md    # Workspace organization
-│   ├── README_OLD.md           # Original project vision
-│   ├── SOLO_DEVELOPER_ROADMAP.md
-│   ├── START_TODAY.md
-│   ├── TECH_STACK.md
 │   └── ... (other docs)
 │
 ├── .vscode/
 │   └── settings.json           # VS Code Python settings
 │
+├── CHANGELOG.md                # ⭐ NEW: Version history (v0.2.0)
 ├── .env                        # Environment variables (DO NOT COMMIT)
-├── requirements.txt            # Python dependencies
+├── requirements.txt            # Python dependencies (updated)
 └── README.md                   # ⭐ This file (main entry point)
 ```
 
@@ -395,63 +451,102 @@ python db_dashboard.py
 
 ## 🗺️ Roadmap
 
-### Phase 2: Core Enhancements (Nov 1-8, 2025)
-- [ ] Transfer between wallets
+### ✅ Phase 1: MVP (Oct 25-26, 2025) - COMPLETE
+- [x] FastAPI backend with PostgreSQL
+- [x] JWT authentication
+- [x] Multi-currency wallets
+- [x] Basic transactions
+- [x] Frontend UI
+
+### ✅ Phase 2: Blockchain Integration (Oct 27, 2025) - COMPLETE
+- [x] Web3.py integration with Infura
+- [x] Import wallet feature
+- [x] Real blockchain sends (Sepolia testnet)
+- [x] Gas fee estimation
+- [x] Transaction hash tracking
+- [x] Sync blockchain balance
+- [x] Private key encryption
+
+### 🚧 Phase 3: Advanced Features (Nov 1-8, 2025) - IN PROGRESS
+- [ ] Transaction status tracking (Pending → Confirmed)
+- [ ] ERC-20 token support (USDT, USDC)
+- [ ] Polygon Mumbai testnet
 - [ ] Email verification (SendGrid)
-- [ ] Blockchain testnet integration
-- [ ] Stress testing
+- [ ] UI improvements (loading, animations)
 
-### Phase 3: Payment Integration (Nov 8-22, 2025)
-- [ ] Stripe integration
+### 📋 Phase 4: Premium Features (Nov 8-22, 2025)
+- [ ] Multi-currency swap (DEX integration)
+- [ ] Stripe payment integration
 - [ ] Bank transfers
-- [ ] Transaction limits
-
-### Phase 4: Advanced Features (Dec 2025)
 - [ ] KYC verification
-- [ ] Cryptocurrency trading
+
+### 🎯 Phase 5: Production (Dec 2025)
+- [ ] Security audit (professional)
+- [ ] Mainnet deployment
+- [ ] Rate limiting & monitoring
 - [ ] Admin dashboard
 
-### Phase 5: Premium Features (Q1 2026)
+### 🚀 Phase 6: Scale (Q1 2026)
 - [ ] Virtual debit cards
 - [ ] Merchant accounts
-- [ ] Mobile app
+- [ ] Mobile app (React Native)
+- [ ] $DPG token launch
 
-**See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for complete timeline.**
+**See [docs/TODO.md](./docs/TODO.md) for detailed task breakdown.**
 
 ---
 
 ## 📊 Current Status
 
-**Version:** 1.0.0-MVP  
-**Completion:** 35% overall  
-**Phase 1 (MVP):** ✅ 100% Complete  
+**Version:** 0.2.0-Beta  
+**Major Milestone:** ✅ Real Blockchain Integration Complete!  
+**Completion:** 50% overall  
+
+### Latest Achievements (Oct 27, 2025)
+- ✅ Import wallet feature (MetaMask, Trust Wallet)
+- ✅ Real blockchain sends (Sepolia testnet)
+- ✅ Gas fee estimation
+- ✅ Transaction hash tracking
+- ✅ Sync blockchain balance
+- ✅ Private key encryption (Fernet)
+- ✅ Delete wallet functionality
+- ✅ Removed fake deposits/withdrawals
 
 ### Database
-- **Users:** 2 registered
-- **Wallets:** Working (multiple currencies)
-- **Transactions:** Fully functional
+- **Users:** Active authentication system
+- **Wallets:** Import + Create functionality
+- **Transactions:** Real blockchain transactions tracked
 
 ### Components Status
 - ✅ Backend Infrastructure: 100%
 - ✅ Authentication: 100%
-- ✅ Wallets: 90%
-- ✅ Transactions: 70%
-- ✅ Frontend: 80%
-- ❌ Email: 0%
-- ❌ KYC: 0%
-- ❌ Trading: 0%
+- ✅ Wallets: 95% (import, sync, delete)
+- ✅ Blockchain Integration: 85% (Sepolia working, Mumbai planned)
+- ✅ Transactions: 80% (send working, status tracking needed)
+- ✅ Frontend: 85% (UI polish needed)
+- ⏳ Email: 0% (planned)
+- ❌ KYC: 0% (future)
+- ❌ Trading: 0% (future)
+
+**📖 Full details:** See [CHANGELOG.md](./CHANGELOG.md) for v0.2.0 release notes.
 
 ---
 
 ## 🐛 Known Issues
 
-### Minor Issues
-- Blockchain transactions are simulated (not live)
-- No email notifications yet
-- Mobile UI needs improvement
-- Need loading spinners
+### Priority Fixes Needed
+- [ ] Transaction status tracking (Pending → Confirmed)
+- [ ] Loading spinners during blockchain operations
+- [ ] Mobile UI responsiveness
+- [ ] Better error messages for blockchain failures
 
-**See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for complete list.**
+### Minor Issues
+- [ ] bcrypt version warning (harmless)
+- [ ] No confirmation modal before delete wallet
+- [ ] Transaction history doesn't show Etherscan links yet
+- [ ] No favicon.ico
+
+**📝 Full list:** See [docs/TODO.md](./docs/TODO.md) for complete bug tracker.
 
 ---
 
@@ -544,9 +639,9 @@ This project is open source for educational and portfolio purposes. Commercial u
 
 ---
 
-**Last Updated:** October 26, 2025  
-**Built with:** ❤️ + Python + AI Assistance  
+**Last Updated:** October 27, 2025 (v0.2.0 - Blockchain Integrated! 🚀)  
+**Built with:** ❤️ + Python + Web3.py + AI Assistance  
 **Developer:** Muhammad Ali (@baymax005)  
-**Status:** 🟢 Active Development  
+**Status:** 🟢 Active Development - Testnet Live!  
 
 **Let's revolutionize payments together! 🚀**

@@ -77,6 +77,103 @@ async def create_wallet(
     return new_wallet
 
 
+@router.post("/import", status_code=status.HTTP_201_CREATED)
+async def import_wallet(
+    import_data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Import an existing wallet using private key
+    
+    - **currency_code**: Currency code (ETH, MATIC)
+    - **private_key**: The wallet's private key (will be encrypted)
+    """
+    currency_code = import_data.get('currency_code', '').upper()
+    private_key = import_data.get('private_key', '').strip()
+    
+    if not currency_code or not private_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Currency code and private key are required"
+        )
+    
+    # Validate private key format
+    if not private_key.startswith('0x') or len(private_key) != 66:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid private key format"
+        )
+    
+    try:
+        # Get address from private key
+        from eth_account import Account
+        account = Account.from_key(private_key)
+        public_address = account.address
+        
+        # Check if wallet with this address already exists
+        existing_wallet = db.query(Wallet).filter(
+            Wallet.address == public_address
+        ).first()
+        
+        if existing_wallet:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This wallet is already imported"
+            )
+        
+        # Check if user already has a wallet for this currency
+        existing_currency_wallet = db.query(Wallet).filter(
+            Wallet.user_id == current_user.id,
+            Wallet.currency_code == currency_code
+        ).first()
+        
+        if existing_currency_wallet:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"You already have a {currency_code} wallet. Delete it first or use a different currency."
+            )
+        
+        # Encrypt private key
+        encrypted_key = encrypt_private_key(private_key)
+        
+        # Get blockchain balance
+        from blockchain_service import get_blockchain_service
+        network_map = {"ETH": "sepolia", "MATIC": "mumbai"}
+        network = network_map.get(currency_code, "sepolia")
+        blockchain = get_blockchain_service(network)
+        balance = blockchain.get_balance(public_address)
+        
+        # Create wallet record
+        new_wallet = Wallet(
+            user_id=current_user.id,
+            currency_code=currency_code,
+            wallet_type=WalletType.CRYPTO,
+            balance=balance,
+            address=public_address,
+            private_key_encrypted=encrypted_key
+        )
+        
+        db.add(new_wallet)
+        db.commit()
+        db.refresh(new_wallet)
+        
+        return {
+            "message": "Wallet imported successfully",
+            "id": new_wallet.id,
+            "currency": currency_code,
+            "address": public_address,
+            "balance": str(balance),
+            "network": network
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to import wallet: {str(e)}"
+        )
+
+
 @router.get("/", response_model=List[WalletResponse])
 async def get_user_wallets(
     current_user: User = Depends(get_current_user),
@@ -175,7 +272,8 @@ async def delete_wallet(
     db: Session = Depends(get_db)
 ):
     """
-    Delete a wallet (only if balance is 0)
+    Delete a wallet
+    Warning: This will delete all associated transactions as well
     """
     wallet = db.query(Wallet).filter(
         Wallet.id == wallet_id,
@@ -188,13 +286,67 @@ async def delete_wallet(
             detail="Wallet not found"
         )
     
-    if wallet.balance > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete wallet with non-zero balance"
-        )
+    # Delete all transactions associated with this wallet first
+    from models import Transaction
+    db.query(Transaction).filter(Transaction.wallet_id == wallet_id).delete()
     
+    # Delete the wallet
     db.delete(wallet)
     db.commit()
     
     return {"message": "Wallet deleted successfully"}
+
+
+@router.post("/{wallet_id}/sync-blockchain")
+async def sync_wallet_from_blockchain(
+    wallet_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Sync wallet balance from blockchain
+    Updates database balance to match actual blockchain balance
+    """
+    wallet = db.query(Wallet).filter(
+        Wallet.id == wallet_id,
+        Wallet.user_id == current_user.id
+    ).first()
+    
+    if not wallet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Wallet not found"
+        )
+    
+    if not wallet.address:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This wallet doesn't have a blockchain address"
+        )
+    
+    # Get blockchain balance
+    from blockchain_service import get_blockchain_service
+    
+    # Map currency to network
+    network_map = {
+        "ETH": "sepolia",  # Use testnet for testing
+        "MATIC": "mumbai"
+    }
+    network = network_map.get(wallet.currency_code, "sepolia")
+    
+    blockchain = get_blockchain_service(network)
+    blockchain_balance = blockchain.get_balance(wallet.address)
+    
+    # Update database balance
+    wallet.balance = blockchain_balance
+    db.commit()
+    
+    return {
+        "message": "✅ Wallet synced with blockchain",
+        "wallet_id": wallet.id,
+        "currency": wallet.currency_code,
+        "address": wallet.address,
+        "balance": str(blockchain_balance),
+        "network": network
+    }
+
