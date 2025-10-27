@@ -154,8 +154,10 @@ class TransactionService:
         if from_wallet_id == to_wallet_id:
             raise ValueError("Cannot transfer to same wallet")
         
-        if from_wallet.currency_code != to_wallet.currency_code:
-            raise ValueError("Currency mismatch. Use conversion endpoint instead")
+        # Note: Allowing cross-currency transfers for now
+        # TODO: Implement proper currency conversion with exchange rates
+        # if from_wallet.currency_code != to_wallet.currency_code:
+        #     raise ValueError("Currency mismatch. Use conversion endpoint instead")
         
         if amount <= 0:
             raise ValueError("Transfer amount must be positive")

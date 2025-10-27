@@ -135,6 +135,33 @@ class TransferRequest(BaseModel):
     amount: float = Field(..., gt=0)
     description: Optional[str] = None
 
+class SendRequest(BaseModel):
+    """Schema for sending to external blockchain address"""
+    wallet_id: str
+    to_address: str = Field(..., min_length=26, max_length=64)
+    amount: float = Field(..., gt=0)
+    network: str = Field(..., pattern="^(sepolia|mumbai|ethereum|polygon)$")
+    description: Optional[str] = None
+    
+    @field_validator('to_address')
+    @classmethod
+    def validate_address(cls, v):
+        """Basic address format validation"""
+        v = v.strip()
+        # Ethereum address (0x + 40 hex chars)
+        if v.startswith('0x'):
+            if len(v) != 42:
+                raise ValueError('Ethereum address must be 42 characters (0x + 40 hex)')
+            if not all(c in '0123456789abcdefABCDEF' for c in v[2:]):
+                raise ValueError('Invalid Ethereum address format')
+        # Bitcoin address validation (basic)
+        elif v.startswith(('1', '3', 'bc1')):
+            if not (26 <= len(v) <= 62):
+                raise ValueError('Invalid Bitcoin address length')
+        else:
+            raise ValueError('Address must start with 0x (Ethereum) or 1/3/bc1 (Bitcoin)')
+        return v
+
 class TransactionResponse(BaseModel):
     """Schema for transaction response"""
     id: str

@@ -10,7 +10,7 @@ from decimal import Decimal
 from database import get_db
 from models import User, Wallet
 from schemas import (
-    DepositRequest, WithdrawalRequest, TransferRequest,
+    DepositRequest, WithdrawalRequest, TransferRequest, SendRequest,
     TransactionResponse, SuccessResponse
 )
 from auth_routes import get_current_user
@@ -150,9 +150,9 @@ async def transfer_funds(
         )
     
     try:
-        # Calculate fee (0.1% for transfers)
+        # No fee for internal transfers (industry standard)
         amount = Decimal(str(transfer_data.amount))
-        fee = amount * Decimal('0.001')  # 0.1% fee
+        fee = Decimal('0')  # FREE internal transfers
         
         withdrawal_tx, deposit_tx = TransactionService.transfer(
             db=db,
@@ -177,6 +177,76 @@ async def transfer_funds(
                 "status": deposit_tx.status.value
             }
         }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/send", status_code=status.HTTP_201_CREATED)
+async def send_to_address(
+    send_data: SendRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Send funds to external blockchain address
+    
+    - **wallet_id**: Source wallet ID
+    - **to_address**: Destination blockchain address
+    - **amount**: Amount to send
+    - **network**: Blockchain network (sepolia, mumbai, ethereum, polygon)
+    - **description**: Optional description
+    
+    ⚠️ This sends REAL blockchain transactions on testnet/mainnet
+    """
+    # Verify wallet belongs to user
+    wallet = db.query(Wallet).filter(
+        Wallet.id == send_data.wallet_id,
+        Wallet.user_id == current_user.id
+    ).first()
+    
+    if not wallet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Wallet not found or does not belong to you"
+        )
+    
+    # Check wallet balance
+    amount = Decimal(str(send_data.amount))
+    if wallet.balance < amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Insufficient balance. Available: {wallet.balance}, Required: {amount}"
+        )
+    
+    try:
+        # TODO: Implement blockchain integration
+        # For now, return mock response
+        # Real implementation will:
+        # 1. Connect to blockchain via Web3/RPC
+        # 2. Sign transaction with wallet's private key
+        # 3. Broadcast transaction
+        # 4. Update database with tx_hash
+        # 5. Monitor transaction confirmation
+        
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Blockchain integration coming soon! (Nov 1-3). For now, use internal transfers between your wallets."
+        )
+        
+        # Mock implementation (will be replaced):
+        # tx_hash = "0x" + "a" * 64  # Fake tx hash
+        # return {
+        #     "message": "Transaction sent successfully",
+        #     "tx_hash": tx_hash,
+        #     "to_address": send_data.to_address,
+        #     "amount": str(amount),
+        #     "network": send_data.network,
+        #     "status": "pending"
+        # }
+        
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

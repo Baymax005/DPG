@@ -435,6 +435,309 @@ async function withdraw() {
     }
 }
 
+// Transfer Modal
+function showTransferModal() {
+    if (wallets.length === 0) {
+        alert('Create at least one wallet first!');
+        return;
+    }
+    
+    // Populate from wallet dropdown
+    const fromSelect = document.getElementById('transferFromWallet');
+    fromSelect.innerHTML = '<option value="">Select source wallet...</option>';
+    wallets.forEach(wallet => {
+        const option = document.createElement('option');
+        option.value = wallet.id;
+        // Use both currency_code and currency fields
+        const currency = wallet.currency_code || wallet.currency;
+        option.dataset.currency = currency;
+        option.textContent = `${currency} - Balance: ${wallet.balance}`;
+        fromSelect.appendChild(option);
+    });
+    
+    // Add event listener for "From" wallet change
+    fromSelect.onchange = function() {
+        updateToWalletDropdown();
+        updateTransferFee();
+    };
+    
+    // Add event listener for amount change
+    const amountInput = document.getElementById('transferAmount');
+    amountInput.oninput = function() {
+        updateTransferFee();
+    };
+    
+    // Reset to internal mode
+    switchTransferMode('internal');
+    
+    document.getElementById('transferModal').classList.remove('hidden');
+}
+
+function updateToWalletDropdown() {
+    const fromSelect = document.getElementById('transferFromWallet');
+    const selectedFromWalletId = fromSelect.value; // Keep as string (UUIDs)
+    const toSelect = document.getElementById('transferToWallet');
+    
+    // Filter wallets (excluding the selected from wallet)
+    toSelect.innerHTML = '<option value="">Select destination wallet...</option>';
+    
+    if (selectedFromWalletId) {
+        wallets.forEach(wallet => {
+            // Show all wallets except the selected one
+            if (String(wallet.id) !== String(selectedFromWalletId)) {
+                const option = document.createElement('option');
+                option.value = wallet.id;
+                const currency = wallet.currency_code || wallet.currency;
+                option.textContent = `${currency} - Balance: ${wallet.balance}`;
+                toSelect.appendChild(option);
+            }
+        });
+    }
+}
+
+function updateTransferFee() {
+    const mode = document.getElementById('internalModeFields').classList.contains('hidden') ? 'external' : 'internal';
+    const amountInput = document.getElementById('transferAmount');
+    const amount = parseFloat(amountInput.value) || 0;
+    
+    if (mode === 'internal') {
+        document.getElementById('transferFeeInfo').textContent = 
+            `✅ FREE internal transfer! No fees charged.`;
+        document.getElementById('feeInfoBox').className = 'bg-green-50 border border-green-200 rounded-lg p-3';
+    } else {
+        // External mode - show testnet fees
+        const fromWallet = wallets.find(w => String(w.id) === document.getElementById('transferFromWallet').value);
+        const currency = fromWallet ? (fromWallet.currency_code || fromWallet.currency) : '';
+        
+        if (currency === 'ETH' || currency === 'USDT' || currency === 'USDC') {
+            document.getElementById('transferFeeInfo').textContent = 
+                `⚡ Testnet Gas Fee: FREE (Sepolia) • Mainnet: ~$2-5`;
+        } else {
+            document.getElementById('transferFeeInfo').textContent = 
+                `💰 Network Fee: Varies by blockchain`;
+        }
+        document.getElementById('feeInfoBox').className = 'bg-blue-50 border border-blue-200 rounded-lg p-3';
+    }
+}
+
+// Switch between Internal and External transfer modes
+let currentTransferMode = 'internal';
+
+function switchTransferMode(mode) {
+    currentTransferMode = mode;
+    
+    const internalFields = document.getElementById('internalModeFields');
+    const externalFields = document.getElementById('externalModeFields');
+    const internalBtn = document.getElementById('internalModeBtn');
+    const externalBtn = document.getElementById('externalModeBtn');
+    const buttonText = document.getElementById('transferButtonText');
+    
+    if (mode === 'internal') {
+        // Show internal mode
+        internalFields.classList.remove('hidden');
+        externalFields.classList.add('hidden');
+        
+        // Update button styles
+        internalBtn.className = 'flex-1 py-2 px-4 rounded-md font-semibold transition-all bg-white text-purple-600 shadow';
+        externalBtn.className = 'flex-1 py-2 px-4 rounded-md font-semibold transition-all text-gray-600';
+        
+        buttonText.textContent = 'Transfer';
+    } else {
+        // Show external mode
+        internalFields.classList.add('hidden');
+        externalFields.classList.remove('hidden');
+        
+        // Update button styles
+        internalBtn.className = 'flex-1 py-2 px-4 rounded-md font-semibold transition-all text-gray-600';
+        externalBtn.className = 'flex-1 py-2 px-4 rounded-md font-semibold transition-all bg-white text-purple-600 shadow';
+        
+        buttonText.textContent = 'Send';
+    }
+    
+    updateTransferFee();
+}
+
+// Validate Ethereum address
+function isValidEthereumAddress(address) {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+// Validate Bitcoin address (basic validation)
+function isValidBitcoinAddress(address) {
+    // P2PKH (1...), P2SH (3...), Bech32 (bc1...)
+    return /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,62}$/.test(address);
+}
+
+// Validate address based on currency
+function validateAddress(address, currency) {
+    if (!address || address.trim() === '') {
+        return { valid: false, message: 'Please enter a recipient address' };
+    }
+    
+    if (currency === 'ETH' || currency === 'USDT' || currency === 'USDC') {
+        if (isValidEthereumAddress(address)) {
+            return { valid: true, message: '' };
+        }
+        return { valid: false, message: 'Invalid Ethereum address. Must start with 0x and be 42 characters long.' };
+    } else if (currency === 'BTC') {
+        if (isValidBitcoinAddress(address)) {
+            return { valid: true, message: '' };
+        }
+        return { valid: false, message: 'Invalid Bitcoin address format.' };
+    }
+    
+    return { valid: false, message: 'Address validation not available for this currency yet.' };
+}
+
+function hideTransferModal() {
+    document.getElementById('transferModal').classList.add('hidden');
+    document.getElementById('transferFromWallet').value = '';
+    document.getElementById('transferToWallet').value = '';
+    document.getElementById('transferToAddress').value = '';
+    document.getElementById('transferAmount').value = '';
+    document.getElementById('transferDescription').value = '';
+    currentTransferMode = 'internal';
+}
+
+async function transfer() {
+    const fromWalletId = document.getElementById('transferFromWallet').value;
+    const amount = parseFloat(document.getElementById('transferAmount').value);
+    const description = document.getElementById('transferDescription').value || 'Transfer';
+    
+    // Validation
+    if (!fromWalletId) {
+        alert('Please select a source wallet');
+        return;
+    }
+    if (!amount || amount <= 0 || isNaN(amount)) {
+        alert('Please enter a valid amount greater than 0');
+        return;
+    }
+    
+    // Get source wallet info
+    const fromWallet = wallets.find(w => String(w.id) === String(fromWalletId));
+    const currency = fromWallet ? (fromWallet.currency_code || fromWallet.currency) : '';
+    
+    if (currentTransferMode === 'internal') {
+        // Internal transfer (between user's wallets)
+        await transferInternal(fromWalletId, amount, description);
+    } else {
+        // External send (to blockchain address)
+        await sendExternal(fromWalletId, amount, description, currency);
+    }
+}
+
+async function transferInternal(fromWalletId, amount, description) {
+    const toWalletId = document.getElementById('transferToWallet').value;
+    
+    if (!toWalletId) {
+        alert('Please select a destination wallet');
+        return;
+    }
+    if (fromWalletId === toWalletId) {
+        alert('Cannot transfer to the same wallet');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/v1/transactions/transfer`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                from_wallet_id: fromWalletId,
+                to_wallet_id: toWalletId,
+                amount: amount,
+                description: description
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            hideTransferModal();
+            loadWallets();
+            loadTransactions();
+            alert(`✅ Transfer successful! ${amount} transferred between your wallets.`);
+        } else {
+            const error = await response.json();
+            let errorMsg = 'Transfer failed';
+            if (Array.isArray(error.detail)) {
+                errorMsg = error.detail.map(err => err.msg || err.type).join(', ');
+            } else if (typeof error.detail === 'string') {
+                errorMsg = error.detail;
+            }
+            alert(errorMsg);
+        }
+    } catch (error) {
+        console.error('Transfer error:', error);
+        alert('Error processing transfer');
+    }
+}
+
+async function sendExternal(fromWalletId, amount, description, currency) {
+    const toAddress = document.getElementById('transferToAddress').value.trim();
+    const network = document.getElementById('transferNetwork').value;
+    
+    // Validate address
+    const validation = validateAddress(toAddress, currency);
+    if (!validation.valid) {
+        alert(validation.message);
+        return;
+    }
+    
+    // Confirm before sending
+    const confirmMsg = `⚠️ SEND TO BLOCKCHAIN\n\n` +
+        `From: ${currency} Wallet\n` +
+        `To: ${toAddress.substring(0, 10)}...${toAddress.substring(toAddress.length - 8)}\n` +
+        `Amount: ${amount} ${currency}\n` +
+        `Network: ${network}\n\n` +
+        `This will send a REAL blockchain transaction!\n` +
+        `Are you sure?`;
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/v1/transactions/send`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                wallet_id: fromWalletId,
+                to_address: toAddress,
+                amount: amount,
+                network: network,
+                description: description
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            hideTransferModal();
+            loadWallets();
+            loadTransactions();
+            alert(`✅ Transaction sent!\n\nTx Hash: ${result.tx_hash}\n\nView on ${network === 'sepolia' ? 'Sepolia Etherscan' : 'Block Explorer'}`);
+        } else {
+            const error = await response.json();
+            let errorMsg = 'Send failed';
+            if (Array.isArray(error.detail)) {
+                errorMsg = error.detail.map(err => err.msg || err.type).join(', ');
+            } else if (typeof error.detail === 'string') {
+                errorMsg = error.detail;
+            }
+            alert('❌ ' + errorMsg);
+        }
+    } catch (error) {
+        console.error('Send error:', error);
+        alert('Error processing blockchain transaction');
+    }
+}
+
 // Load Transactions
 async function loadTransactions() {
     try {
