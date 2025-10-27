@@ -6,7 +6,6 @@ import os
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from eth_account import Account
 from dotenv import load_dotenv
 import logging
@@ -66,9 +65,8 @@ class BlockchainService:
         # Initialize Web3
         self.w3 = Web3(Web3.HTTPProvider(self.network_config['rpc_url']))
         
-        # Add PoA middleware for testnets
-        if network in ['sepolia', 'mumbai']:
-            self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        # Note: PoA middleware not needed in newer Web3.py versions
+        # The library handles this automatically
         
         # Verify connection
         if not self.w3.is_connected():
@@ -88,6 +86,7 @@ class BlockchainService:
             Balance in ETH (Decimal)
         """
         try:
+            # Convert to proper checksum address
             checksum_address = self.w3.to_checksum_address(address)
             balance_wei = self.w3.eth.get_balance(checksum_address)
             balance_eth = self.w3.from_wei(balance_wei, 'ether')
@@ -310,15 +309,29 @@ if __name__ == "__main__":
         is_valid = bc.is_valid_address(test_address)
         print(f"✅ Address validation: {is_valid}")
         
-        # Test balance check
-        balance = bc.get_balance(test_address)
-        print(f"✅ Balance check: {balance} ETH")
+        # Only test balance if address is valid
+        if is_valid:
+            balance = bc.get_balance(test_address)
+            print(f"✅ Balance check: {balance} ETH")
+        else:
+            print(f"⚠️  Skipping balance check (invalid address)")
         
         # Generate new wallet
         wallet = bc.generate_new_wallet()
         print(f"✅ Generated wallet: {wallet['address']}")
+        print(f"   Private key: {wallet['private_key'][:20]}...") # Show first 20 chars only
+        
+        # Get balance of newly generated wallet
+        new_balance = bc.get_balance(wallet['address'])
+        print(f"✅ New wallet balance: {new_balance} ETH")
         
         print("\n✅ All tests passed!")
+        print("\n📝 Next steps:")
+        print("1. Get testnet ETH from https://sepoliafaucet.com")
+        print(f"2. Send to your wallet: {wallet['address']}")
+        print("3. Update .env with MASTER_WALLET_PRIVATE_KEY")
         
     except Exception as e:
         print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()

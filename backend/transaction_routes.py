@@ -15,6 +15,8 @@ from schemas import (
 )
 from auth_routes import get_current_user
 from transaction_service import TransactionService
+from blockchain_service import get_blockchain_service
+import os
 
 router = APIRouter(prefix="/api/v1/transactions", tags=["Transactions"])
 
@@ -222,35 +224,77 @@ async def send_to_address(
         )
     
     try:
-        # TODO: Implement blockchain integration
-        # For now, return mock response
-        # Real implementation will:
-        # 1. Connect to blockchain via Web3/RPC
-        # 2. Sign transaction with wallet's private key
-        # 3. Broadcast transaction
-        # 4. Update database with tx_hash
-        # 5. Monitor transaction confirmation
+        # Get blockchain service for the specified network
+        blockchain = get_blockchain_service(send_data.network)
         
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Blockchain integration coming soon! (Nov 1-3). For now, use internal transfers between your wallets."
+        # Get master wallet private key from environment
+        private_key = os.getenv('MASTER_WALLET_PRIVATE_KEY')
+        if not private_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Blockchain not configured. Contact administrator."
+            )
+        
+        # Estimate gas fee first
+        master_account_address = blockchain.w3.eth.account.from_key(private_key).address
+        gas_estimate = blockchain.estimate_gas_fee(
+            from_address=master_account_address,
+            to_address=send_data.to_address,
+            amount=amount
         )
         
-        # Mock implementation (will be replaced):
-        # tx_hash = "0x" + "a" * 64  # Fake tx hash
-        # return {
-        #     "message": "Transaction sent successfully",
-        #     "tx_hash": tx_hash,
-        #     "to_address": send_data.to_address,
-        #     "amount": str(amount),
-        #     "network": send_data.network,
-        #     "status": "pending"
-        # }
+        # Send blockchain transaction
+        tx_result = blockchain.send_transaction(
+            private_key=private_key,
+            to_address=send_data.to_address,
+            amount=amount
+        )
+        
+        # Create transaction record in database
+        from models import Transaction, TransactionType, TransactionStatus
+        from datetime import datetime
+        
+        transaction = Transaction(
+            wallet_id=send_data.wallet_id,
+            type=TransactionType.WITHDRAWAL,
+            amount=amount,
+            fee=Decimal(gas_estimate['total_fee_eth']),
+            status=TransactionStatus.PENDING,
+            description=send_data.description or f"Send to {send_data.to_address[:10]}...",
+            tx_hash=tx_result['tx_hash'],
+            created_at=datetime.utcnow()
+        )
+        
+        # Deduct from wallet balance (including gas fee)
+        total_deducted = amount + Decimal(gas_estimate['total_fee_eth'])
+        wallet.balance -= total_deducted
+        
+        db.add(transaction)
+        db.commit()
+        db.refresh(transaction)
+        
+        return {
+            "message": "✅ Transaction sent to blockchain!",
+            "tx_hash": tx_result['tx_hash'],
+            "to_address": send_data.to_address,
+            "amount": str(amount),
+            "gas_fee": gas_estimate['total_fee_eth'],
+            "network": send_data.network,
+            "status": "pending",
+            "explorer_url": tx_result['explorer_url'],
+            "note": "Transaction is pending confirmation. Check Etherscan for status."
+        }
         
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Blockchain error: {str(e)}"
         )
 
 
