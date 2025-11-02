@@ -368,3 +368,132 @@ async def get_user_transactions(
     )
     
     return transactions
+
+
+@router.get("/status/{tx_hash}")
+async def check_transaction_status(
+    tx_hash: str,
+    network: str = "sepolia",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Check blockchain transaction status
+    
+    - **tx_hash**: Transaction hash to check
+    - **network**: Blockchain network (sepolia, ethereum, polygon, mumbai)
+    
+    Returns real-time status from blockchain explorer
+    """
+    try:
+        # Verify transaction belongs to user
+        from models import Transaction
+        transaction = db.query(Transaction).filter(
+            Transaction.tx_hash == tx_hash
+        ).first()
+        
+        if transaction:
+            # Verify wallet belongs to user
+            wallet = db.query(Wallet).filter(
+                Wallet.id == transaction.wallet_id,
+                Wallet.user_id == current_user.id
+            ).first()
+            
+            if not wallet:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have permission to view this transaction"
+                )
+        
+        # Get blockchain service
+        blockchain = get_blockchain_service(network)
+        
+        # Check status on blockchain
+        status_info = blockchain.get_transaction_status(tx_hash)
+        
+        # Update database if status changed
+        if transaction and status_info['status'] != 'pending':
+            from models import TransactionStatus
+            if status_info['status'] == 'confirmed':
+                transaction.status = TransactionStatus.COMPLETED
+            elif status_info['status'] == 'failed':
+                transaction.status = TransactionStatus.FAILED
+            db.commit()
+        
+        return {
+            "tx_hash": tx_hash,
+            "status": status_info['status'],
+            "confirmations": status_info.get('confirmations', 0),
+            "block_number": status_info.get('block_number'),
+            "explorer_url": f"{blockchain.network_config['explorer']}/tx/{tx_hash}",
+            "network": network
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error checking transaction status: {str(e)}"
+        )
+
+
+@router.post("/sync-balance/{wallet_id}")
+async def sync_wallet_balance(
+    wallet_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Sync wallet balance with blockchain
+    
+    - **wallet_id**: Wallet ID to sync
+    
+    Fetches real balance from blockchain and updates database
+    """
+    # Verify wallet belongs to user
+    wallet = db.query(Wallet).filter(
+        Wallet.id == wallet_id,
+        Wallet.user_id == current_user.id
+    ).first()
+    
+    if not wallet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Wallet not found or does not belong to you"
+        )
+    
+    if not wallet.address:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This wallet doesn't have a blockchain address"
+        )
+    
+    try:
+        # Get blockchain service (default to sepolia for now)
+        blockchain = get_blockchain_service('sepolia')
+        
+        # Get real balance from blockchain
+        blockchain_balance = blockchain.get_balance(wallet.address)
+        
+        # Store old balance for comparison
+        old_balance = wallet.balance
+        
+        # Update database balance
+        wallet.balance = blockchain_balance
+        db.commit()
+        db.refresh(wallet)
+        
+        return {
+            "message": "✅ Balance synced with blockchain",
+            "wallet_id": wallet_id,
+            "address": wallet.address,
+            "old_balance": str(old_balance),
+            "new_balance": str(blockchain_balance),
+            "difference": str(blockchain_balance - old_balance),
+            "network": "sepolia"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error syncing balance: {str(e)}"
+        )
