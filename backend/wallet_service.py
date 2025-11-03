@@ -4,31 +4,25 @@ Handles wallet creation, encryption, and blockchain interactions
 """
 from eth_account import Account
 from web3 import Web3
-from cryptography.fernet import Fernet
 import secrets
 import os
 from typing import Tuple, Dict
 from dotenv import load_dotenv
 
+# Import enterprise-grade encryption
+from crypto_manager import encrypt_private_key, decrypt_private_key, get_crypto_manager
+
 load_dotenv()
 
-# Encryption key for private keys (MUST be stored securely in production)
-ENCRYPTION_KEY = os.getenv("WALLET_ENCRYPTION_KEY")
-if not ENCRYPTION_KEY:
-    # Generate a key if not exists (for development)
-    ENCRYPTION_KEY = Fernet.generate_key().decode()
-    print(f"\n{'='*70}")
-    print(f"⚠️  WARNING: No WALLET_ENCRYPTION_KEY in .env file!")
-    print(f"⚠️  Using temporary key: {ENCRYPTION_KEY[:20]}...")
-    print(f"⚠️  Add this to backend/.env to persist wallets:")
-    print(f"WALLET_ENCRYPTION_KEY={ENCRYPTION_KEY}")
-    print(f"{'='*70}\n")
-
+# Validate encryption on startup
 try:
-    cipher_suite = Fernet(ENCRYPTION_KEY.encode())
+    crypto_manager = get_crypto_manager()
+    print("✅ Enterprise encryption initialized successfully")
 except Exception as e:
-    print(f"❌ Failed to initialize encryption: {e}")
-    print(f"⚠️  Key length: {len(ENCRYPTION_KEY)} chars")
+    print(f"❌ CRITICAL: Encryption initialization failed!")
+    print(f"   Error: {e}")
+    print()
+    print("   Run: python backend/generate_master_key.py")
     raise
 
 
@@ -49,47 +43,6 @@ def generate_ethereum_wallet() -> Tuple[str, str]:
     account = Account.from_key(private_key)
     
     return account.address, private_key
-
-
-def encrypt_private_key(private_key: str) -> str:
-    """
-    Encrypt a private key for storage
-    
-    Args:
-        private_key: Plain text private key
-        
-    Returns:
-        str: Encrypted private key (base64)
-    """
-    encrypted = cipher_suite.encrypt(private_key.encode())
-    return encrypted.decode()
-
-
-def decrypt_private_key(encrypted_key: str) -> str:
-    """
-    Decrypt a private key
-    
-    Args:
-        encrypted_key: Encrypted private key (base64)
-        
-    Returns:
-        str: Decrypted private key
-    """
-    try:
-        decrypted = cipher_suite.decrypt(encrypted_key.encode())
-        return decrypted.decode()
-    except Exception as e:
-        error_msg = str(e)
-        if 'Invalid' in error_msg or 'token' in error_msg:
-            raise ValueError(
-                "Cannot decrypt wallet - encryption key has changed. "
-                "This wallet was encrypted with a different key. "
-                "To fix: 1) Copy the WALLET_ENCRYPTION_KEY from backend console startup, "
-                "2) Add it to backend/.env, 3) Restart backend. "
-                "Or re-import your wallet with the current key."
-            )
-        else:
-            raise ValueError(f"Decryption failed: {error_msg}")
 
 
 def get_wallet_balance(address: str, network: str = "mainnet") -> Dict:
