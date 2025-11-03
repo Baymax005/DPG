@@ -194,22 +194,24 @@ class BlockchainService:
             sender_balance_wei = self.w3.eth.get_balance(from_addr)
             sender_balance_eth = self.w3.from_wei(sender_balance_wei, 'ether')
             
-            # Get nonce
+            # Get nonce - use 'pending' to get latest including pending txs
             try:
-                nonce = self.w3.eth.get_transaction_count(from_addr)
-                logger.info(f"Nonce for {from_addr}: {nonce}")
+                nonce = self.w3.eth.get_transaction_count(from_addr, 'pending')
+                logger.info(f"📋 Nonce for {from_addr}: {nonce} (including pending)")
             except Exception as e:
                 logger.error(f"Failed to get nonce: {e}")
                 raise ValueError(f"Failed to connect to blockchain: {str(e)}")
             
-            # Get gas price
+            # Get gas price with buffer for faster confirmation
             if gas_price is None:
                 try:
-                    gas_price = self.w3.eth.gas_price
-                    logger.info(f"Current gas price: {gas_price} wei")
+                    base_gas_price = self.w3.eth.gas_price
+                    # Add 20% buffer for faster confirmation and to avoid "underpriced" errors
+                    gas_price = int(base_gas_price * 1.2)
+                    logger.info(f"⛽ Gas price: {self.w3.from_wei(gas_price, 'gwei')} gwei (base + 20%)")
                 except Exception as e:
                     logger.error(f"Failed to get gas price: {e}")
-                    gas_price = self.w3.to_wei(1, 'gwei')  # Fallback to 1 gwei
+                    gas_price = self.w3.to_wei(2, 'gwei')  # Fallback to 2 gwei
             
             # Calculate total cost
             gas_cost_wei = 21000 * gas_price
@@ -248,14 +250,20 @@ class BlockchainService:
             except Exception as e:
                 logger.error(f"Failed to broadcast transaction: {e}")
                 error_msg = str(e).lower()
-                if 'nonce' in error_msg:
-                    raise ValueError(f"Nonce error: {str(e)}. Try again in a few seconds.")
+                
+                # Handle specific errors
+                if 'nonce too low' in error_msg:
+                    raise ValueError(f"⏳ Transaction already pending. Please wait 10-15 seconds before sending another transaction.")
+                elif 'replacement transaction underpriced' in error_msg:
+                    raise ValueError(f"⛽ Previous transaction still pending. Wait for it to complete or increase gas price.")
+                elif 'insufficient funds' in error_msg or 'balance' in error_msg:
+                    raise ValueError(f"💰 Insufficient balance: {str(e)}")
                 elif 'gas' in error_msg:
-                    raise ValueError(f"Gas error: {str(e)}. Insufficient funds for gas.")
-                elif 'balance' in error_msg or 'funds' in error_msg:
-                    raise ValueError(f"Insufficient balance: {str(e)}")
+                    raise ValueError(f"⛽ Gas error: {str(e)}. Try with a higher gas price.")
+                elif 'nonce' in error_msg:
+                    raise ValueError(f"📋 Nonce error: {str(e)}. Wait a few seconds and try again.")
                 else:
-                    raise ValueError(f"Transaction failed: {str(e)}")
+                    raise ValueError(f"❌ Transaction failed: {str(e)}")
             
             logger.info(f"✅ Transaction sent: {tx_hash_hex}")
             

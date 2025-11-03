@@ -54,7 +54,7 @@ async def startup_event():
     # Start transaction monitor in background
     monitor = get_transaction_monitor()
     asyncio.create_task(monitor.start())
-    print("✅ Transaction monitor started - will check pending transactions every 30 seconds")
+    print("✅ Transaction monitor started - will check pending transactions every 10 seconds")
 
 
 # Shutdown event - Stop transaction monitor

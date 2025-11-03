@@ -4,6 +4,78 @@ let authToken = localStorage.getItem('dpg_token');
 let currentUser = null;
 let wallets = [];
 
+// ============================================
+// FORMATTING UTILITIES
+// ============================================
+
+/**
+ * Format cryptocurrency amounts with proper precision
+ * Shows up to 8 decimal places, removes trailing zeros
+ * @param {number|string} amount - The amount to format
+ * @param {number} maxDecimals - Maximum decimal places (default: 8)
+ * @returns {string} Formatted amount
+ */
+function formatCrypto(amount, maxDecimals = 8) {
+    if (amount === null || amount === undefined || amount === '') return '0';
+    
+    const num = parseFloat(amount);
+    if (isNaN(num)) return '0';
+    
+    // For very small amounts, show full precision
+    if (num > 0 && num < 0.00000001) {
+        return num.toExponential(2); // Scientific notation for tiny amounts
+    }
+    
+    // Format with max decimals, then remove trailing zeros
+    let formatted = num.toFixed(maxDecimals);
+    
+    // Remove trailing zeros after decimal point
+    formatted = formatted.replace(/\.?0+$/, '');
+    
+    // If result is empty or just a dot, return "0"
+    if (formatted === '' || formatted === '.') return '0';
+    
+    return formatted;
+}
+
+/**
+ * Format fiat currency (USD, EUR, etc.)
+ * Always shows 2 decimal places
+ * @param {number|string} amount - The amount to format
+ * @returns {string} Formatted amount with 2 decimals
+ */
+function formatFiat(amount) {
+    if (amount === null || amount === undefined || amount === '') return '0.00';
+    const num = parseFloat(amount);
+    if (isNaN(num)) return '0.00';
+    return num.toFixed(2);
+}
+
+/**
+ * Shorten blockchain address for display
+ * @param {string} address - Full blockchain address
+ * @param {number} startChars - Characters to show at start (default: 6)
+ * @param {number} endChars - Characters to show at end (default: 4)
+ * @returns {string} Shortened address like "0x1234...5678"
+ */
+function shortenAddress(address, startChars = 6, endChars = 4) {
+    if (!address) return '';
+    if (address.length <= startChars + endChars) return address;
+    return `${address.substring(0, startChars)}...${address.substring(address.length - endChars)}`;
+}
+
+/**
+ * Format date for display
+ * @param {string|Date} date - Date to format
+ * @returns {string} Formatted date string
+ */
+function formatDate(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return date;
+    return d.toLocaleString();
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     if (authToken) {
@@ -187,6 +259,7 @@ async function login() {
 function logout() {
     authToken = null;
     localStorage.removeItem('dpg_token');
+    stopTransactionAutoRefresh(); // Stop auto-refresh on logout
     showLoginPage();
 }
 
@@ -237,16 +310,21 @@ function displayWallets() {
         return;
     }
     
-    container.innerHTML = wallets.map(wallet => `
+    container.innerHTML = wallets.map(wallet => {
+        // Use crypto formatting for crypto wallets, fiat formatting for USD
+        const isCrypto = wallet.wallet_type === 'crypto' || wallet.currency_code !== 'USD';
+        const formattedBalance = isCrypto ? formatCrypto(wallet.balance, 8) : formatFiat(wallet.balance);
+        
+        return `
         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
             <div class="flex justify-between items-center mb-2">
                 <div class="flex-1">
                     <h4 class="font-bold text-lg">${wallet.currency_code}</h4>
                     <p class="text-sm text-gray-500">${wallet.wallet_type}</p>
-                    ${wallet.address ? `<p class="text-xs text-gray-400 mt-1 font-mono">${wallet.address.substring(0, 15)}...${wallet.address.substring(wallet.address.length - 8)}</p>` : ''}
+                    ${wallet.address ? `<p class="text-xs text-gray-400 mt-1 font-mono">${shortenAddress(wallet.address, 15, 8)}</p>` : ''}
                 </div>
                 <div class="text-right">
-                    <p class="text-2xl font-bold text-green-600">${parseFloat(wallet.balance).toFixed(4)}</p>
+                    <p class="text-2xl font-bold text-green-600">${formattedBalance}</p>
                     <p class="text-sm text-gray-500">${wallet.currency_code}</p>
                 </div>
             </div>
@@ -265,7 +343,8 @@ function displayWallets() {
                 ` : ''}
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Populate wallet dropdowns
@@ -767,6 +846,13 @@ async function sendExternal(fromWalletId, amount, description, currency) {
         return;
     }
     
+    // Disable send button to prevent double-clicking
+    const sendButton = document.querySelector('#transferModal button[onclick="transfer()"]');
+    if (sendButton) {
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+    }
+    
     try {
         const response = await fetch(`${API_URL}/api/v1/transactions/send`, {
             method: 'POST',
@@ -788,7 +874,7 @@ async function sendExternal(fromWalletId, amount, description, currency) {
             hideTransferModal();
             loadWallets();
             loadTransactions();
-            alert(`✅ Transaction sent!\n\nTx Hash: ${result.tx_hash}\n\nView on ${network === 'sepolia' ? 'Sepolia Etherscan' : 'Block Explorer'}`);
+            alert(`✅ Transaction sent!\n\nTx Hash: ${result.tx_hash}\n\nView on ${network === 'sepolia' ? 'Sepolia Etherscan' : 'Block Explorer'}\n\n⏳ Status will auto-update in 10-15 seconds`);
         } else {
             const error = await response.json();
             let errorMsg = 'Send failed';
@@ -802,8 +888,17 @@ async function sendExternal(fromWalletId, amount, description, currency) {
     } catch (error) {
         console.error('Send error:', error);
         alert('Error processing blockchain transaction');
+    } finally {
+        // Re-enable send button
+        if (sendButton) {
+            sendButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i><span id="transferButtonText">Send</span>';
+        }
     }
 }
+
+// Auto-refresh interval ID
+let transactionRefreshInterval = null;
 
 // Load Transactions
 async function loadTransactions() {
@@ -814,8 +909,49 @@ async function loadTransactions() {
         
         const transactions = await response.json();
         displayTransactions(transactions);
+        
+        // Start auto-refresh if not already running
+        if (!transactionRefreshInterval) {
+            startTransactionAutoRefresh();
+        }
     } catch (error) {
         console.error('Error loading transactions:', error);
+    }
+}
+
+// Start auto-refreshing transactions every 15 seconds
+function startTransactionAutoRefresh() {
+    // Clear any existing interval
+    if (transactionRefreshInterval) {
+        clearInterval(transactionRefreshInterval);
+    }
+    
+    // Auto-refresh every 15 seconds
+    transactionRefreshInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`${API_URL}/api/v1/transactions/history?limit=20`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            
+            if (response.ok) {
+                const transactions = await response.json();
+                displayTransactions(transactions);
+                console.log('🔄 Transactions auto-refreshed');
+            }
+        } catch (error) {
+            console.error('Auto-refresh error:', error);
+        }
+    }, 15000); // 15 seconds
+    
+    console.log('✅ Auto-refresh enabled (every 15 seconds)');
+}
+
+// Stop auto-refresh
+function stopTransactionAutoRefresh() {
+    if (transactionRefreshInterval) {
+        clearInterval(transactionRefreshInterval);
+        transactionRefreshInterval = null;
+        console.log('🛑 Auto-refresh stopped');
     }
 }
 
@@ -840,28 +976,41 @@ function displayTransactions(transactions) {
                         <th class="px-4 py-2 text-left">Fee</th>
                         <th class="px-4 py-2 text-left">Status</th>
                         <th class="px-4 py-2 text-left">Date</th>
+                        <th class="px-4 py-2 text-left">Details</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${transactions.map(tx => `
+                    ${transactions.map(tx => {
+                        // Determine if this is a crypto transaction (has network or blockchain fields)
+                        const isCrypto = tx.network || tx.tx_hash || (tx.wallet && tx.wallet.currency_code !== 'USD');
+                        const formattedAmount = isCrypto ? formatCrypto(tx.amount, 8) : formatFiat(tx.amount);
+                        const formattedFee = isCrypto ? formatCrypto(tx.fee, 8) : formatFiat(tx.fee);
+                        
+                        return `
                         <tr class="border-b hover:bg-gray-50">
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 rounded text-sm ${getTypeColor(tx.type)}">
                                     ${tx.type}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 font-semibold">${parseFloat(tx.amount).toFixed(2)}</td>
-                            <td class="px-4 py-3">${parseFloat(tx.fee).toFixed(2)}</td>
+                            <td class="px-4 py-3 font-semibold">${formattedAmount}</td>
+                            <td class="px-4 py-3">${formattedFee}</td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 rounded text-sm ${getStatusColor(tx.status)}">
                                     ${tx.status}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-500">
-                                ${new Date(tx.created_at).toLocaleString()}
+                                ${formatDate(tx.created_at)}
+                            </td>
+                            <td class="px-4 py-3 text-xs">
+                                ${tx.network ? `<span class="text-blue-600">📡 ${tx.network}</span><br>` : ''}
+                                ${tx.tx_hash ? `<a href="https://sepolia.etherscan.io/tx/${tx.tx_hash}" target="_blank" class="text-purple-600 hover:underline" title="${tx.tx_hash}">🔗 ${shortenAddress(tx.tx_hash, 8, 6)}</a>` : ''}
+                                ${tx.description ? `<span class="text-gray-500">${tx.description}</span>` : ''}
                             </td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>

@@ -215,6 +215,22 @@ async def send_to_address(
             detail="Wallet not found or does not belong to you"
         )
     
+    # Check for pending transactions from this wallet (cooldown check)
+    from models import Transaction, TransactionStatus
+    from datetime import datetime, timedelta
+    
+    pending_tx = db.query(Transaction).filter(
+        Transaction.wallet_id == send_data.wallet_id,
+        Transaction.status == TransactionStatus.PENDING,
+        Transaction.tx_hash.isnot(None)  # Only check blockchain transactions
+    ).first()
+    
+    if pending_tx:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"⏳ You have a pending transaction. Please wait 10-15 seconds for it to confirm before sending another. Check status: https://sepolia.etherscan.io/tx/{pending_tx.tx_hash}"
+        )
+    
     # Check wallet balance
     amount = Decimal(str(send_data.amount))
     if wallet.balance < amount:

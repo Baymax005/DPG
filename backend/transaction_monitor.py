@@ -110,7 +110,7 @@ def get_transaction_monitor() -> TransactionMonitor:
     """Get or create transaction monitor singleton"""
     global _monitor
     if _monitor is None:
-        _monitor = TransactionMonitor(check_interval=30)  # Check every 30 seconds
+        _monitor = TransactionMonitor(check_interval=10)  # Check every 10 seconds
     return _monitor
 
 
