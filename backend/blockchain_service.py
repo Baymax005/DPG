@@ -164,8 +164,20 @@ class BlockchainService:
             Dict with tx_hash and status
         """
         try:
+            # Validate to_address first
+            if not to_address or not isinstance(to_address, str):
+                raise ValueError("Recipient address is required")
+            
+            if not self.is_valid_address(to_address):
+                raise ValueError(f"Invalid Ethereum address: {to_address}")
+            
             # Get account from private key
-            account = Account.from_key(private_key)
+            try:
+                account = Account.from_key(private_key)
+            except Exception as e:
+                logger.error(f"Invalid private key: {e}")
+                raise ValueError("Invalid private key format")
+            
             from_address = account.address
             
             # Convert addresses to checksum
@@ -173,14 +185,42 @@ class BlockchainService:
             to_addr = self.w3.to_checksum_address(to_address)
             
             # Convert amount to wei
-            amount_wei = self.w3.to_wei(amount, 'ether')
+            try:
+                amount_wei = self.w3.to_wei(amount, 'ether')
+            except Exception as e:
+                raise ValueError(f"Invalid amount: {amount}")
+            
+            # Check sender balance
+            sender_balance_wei = self.w3.eth.get_balance(from_addr)
+            sender_balance_eth = self.w3.from_wei(sender_balance_wei, 'ether')
             
             # Get nonce
-            nonce = self.w3.eth.get_transaction_count(from_addr)
+            try:
+                nonce = self.w3.eth.get_transaction_count(from_addr)
+                logger.info(f"Nonce for {from_addr}: {nonce}")
+            except Exception as e:
+                logger.error(f"Failed to get nonce: {e}")
+                raise ValueError(f"Failed to connect to blockchain: {str(e)}")
             
             # Get gas price
             if gas_price is None:
-                gas_price = self.w3.eth.gas_price
+                try:
+                    gas_price = self.w3.eth.gas_price
+                    logger.info(f"Current gas price: {gas_price} wei")
+                except Exception as e:
+                    logger.error(f"Failed to get gas price: {e}")
+                    gas_price = self.w3.to_wei(1, 'gwei')  # Fallback to 1 gwei
+            
+            # Calculate total cost
+            gas_cost_wei = 21000 * gas_price
+            total_cost_wei = amount_wei + gas_cost_wei
+            
+            if sender_balance_wei < total_cost_wei:
+                raise ValueError(
+                    f"Insufficient balance: have {sender_balance_eth} ETH, "
+                    f"need {self.w3.from_wei(total_cost_wei, 'ether')} ETH "
+                    f"(amount + gas)"
+                )
             
             # Build transaction
             transaction = {
@@ -192,12 +232,30 @@ class BlockchainService:
                 'chainId': self.network_config['chain_id']
             }
             
+            logger.info(f"Building transaction: from={from_addr[:10]}... to={to_addr[:10]}... value={amount} ETH")
+            
             # Sign transaction
-            signed_txn = self.w3.eth.account.sign_transaction(transaction, private_key)
+            try:
+                signed_txn = self.w3.eth.account.sign_transaction(transaction, private_key)
+            except Exception as e:
+                logger.error(f"Failed to sign transaction: {e}")
+                raise ValueError(f"Failed to sign transaction: {str(e)}")
             
             # Send transaction
-            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.raw_transaction)
-            tx_hash_hex = self.w3.to_hex(tx_hash)
+            try:
+                tx_hash = self.w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+                tx_hash_hex = self.w3.to_hex(tx_hash)
+            except Exception as e:
+                logger.error(f"Failed to broadcast transaction: {e}")
+                error_msg = str(e).lower()
+                if 'nonce' in error_msg:
+                    raise ValueError(f"Nonce error: {str(e)}. Try again in a few seconds.")
+                elif 'gas' in error_msg:
+                    raise ValueError(f"Gas error: {str(e)}. Insufficient funds for gas.")
+                elif 'balance' in error_msg or 'funds' in error_msg:
+                    raise ValueError(f"Insufficient balance: {str(e)}")
+                else:
+                    raise ValueError(f"Transaction failed: {str(e)}")
             
             logger.info(f"✅ Transaction sent: {tx_hash_hex}")
             
@@ -211,9 +269,12 @@ class BlockchainService:
                 'status': 'pending'
             }
             
-        except Exception as e:
-            logger.error(f"Error sending transaction: {e}")
+        except ValueError as e:
+            # Re-raise ValueError with message intact
             raise
+        except Exception as e:
+            logger.error(f"Unexpected error sending transaction: {e}")
+            raise ValueError(f"Blockchain error: {str(e)}")
     
     def get_transaction_status(self, tx_hash: str) -> Dict[str, Any]:
         """

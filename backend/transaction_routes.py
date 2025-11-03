@@ -224,8 +224,22 @@ async def send_to_address(
         )
     
     try:
+        # Validate recipient address first
+        if not send_data.to_address:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Recipient address is required"
+            )
+        
         # Get blockchain service for the specified network
         blockchain = get_blockchain_service(send_data.network)
+        
+        # Validate address format
+        if not blockchain.is_valid_address(send_data.to_address):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid Ethereum address: {send_data.to_address}. Please check the address and try again."
+            )
         
         # Check if wallet has blockchain address and private key
         if not wallet.address or not wallet.private_key_encrypted:
@@ -236,17 +250,35 @@ async def send_to_address(
         
         # Decrypt user's private key
         from wallet_service import decrypt_private_key
-        private_key = decrypt_private_key(wallet.private_key_encrypted)
+        try:
+            private_key = decrypt_private_key(wallet.private_key_encrypted)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to decrypt wallet key: {str(e)}"
+            )
         
         # Get wallet's actual blockchain balance
-        blockchain_balance = blockchain.get_balance(wallet.address)
+        try:
+            blockchain_balance = blockchain.get_balance(wallet.address)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch balance from blockchain: {str(e)}"
+            )
         
         # Estimate gas fee first
-        gas_estimate = blockchain.estimate_gas_fee(
-            from_address=wallet.address,
-            to_address=send_data.to_address,
-            amount=amount
-        )
+        try:
+            gas_estimate = blockchain.estimate_gas_fee(
+                from_address=wallet.address,
+                to_address=send_data.to_address,
+                amount=amount
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to estimate gas: {str(e)}"
+            )
         
         # Check if user has enough ETH for amount + gas
         total_needed = amount + Decimal(gas_estimate['total_fee_eth'])
