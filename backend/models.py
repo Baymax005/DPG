@@ -111,6 +111,7 @@ class Transaction(Base):
     # External references
     tx_hash = Column(String, nullable=True)  # Blockchain transaction hash
     reference_id = Column(String, nullable=True)  # External reference
+    network = Column(String, nullable=True, default="sepolia")  # Blockchain network
     
     # Metadata
     description = Column(String, nullable=True)

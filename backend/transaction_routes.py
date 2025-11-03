@@ -307,6 +307,7 @@ async def send_to_address(
             status=TransactionStatus.PENDING,
             description=send_data.description or f"Send to {send_data.to_address[:10]}...",
             tx_hash=tx_result['tx_hash'],
+            network=send_data.network,  # Save network for status checking
             created_at=datetime.utcnow()
         )
         

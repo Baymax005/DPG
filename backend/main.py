@@ -6,11 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import os
+import asyncio
 
 from database import engine, Base
 from auth_routes import router as auth_router
 from wallet_routes import router as wallet_router
 from transaction_routes import router as transaction_router
+from transaction_monitor import get_transaction_monitor
 
 # Create database tables
 print("🔧 Initializing database tables...")
@@ -43,6 +45,26 @@ app.include_router(wallet_router)
 
 # Include transaction routes
 app.include_router(transaction_router)
+
+
+# Startup event - Start transaction monitor
+@app.on_event("startup")
+async def startup_event():
+    """Start background services on app startup"""
+    # Start transaction monitor in background
+    monitor = get_transaction_monitor()
+    asyncio.create_task(monitor.start())
+    print("✅ Transaction monitor started - will check pending transactions every 30 seconds")
+
+
+# Shutdown event - Stop transaction monitor
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop background services on app shutdown"""
+    monitor = get_transaction_monitor()
+    monitor.stop()
+    print("🛑 Transaction monitor stopped")
+
 
 @app.get("/")
 async def root():
