@@ -17,9 +17,19 @@ ENCRYPTION_KEY = os.getenv("WALLET_ENCRYPTION_KEY")
 if not ENCRYPTION_KEY:
     # Generate a key if not exists (for development)
     ENCRYPTION_KEY = Fernet.generate_key().decode()
-    print(f"⚠️  WARNING: Using temporary encryption key. Set WALLET_ENCRYPTION_KEY in .env")
+    print(f"\n{'='*70}")
+    print(f"⚠️  WARNING: No WALLET_ENCRYPTION_KEY in .env file!")
+    print(f"⚠️  Using temporary key: {ENCRYPTION_KEY[:20]}...")
+    print(f"⚠️  Add this to backend/.env to persist wallets:")
+    print(f"WALLET_ENCRYPTION_KEY={ENCRYPTION_KEY}")
+    print(f"{'='*70}\n")
 
-cipher_suite = Fernet(ENCRYPTION_KEY.encode())
+try:
+    cipher_suite = Fernet(ENCRYPTION_KEY.encode())
+except Exception as e:
+    print(f"❌ Failed to initialize encryption: {e}")
+    print(f"⚠️  Key length: {len(ENCRYPTION_KEY)} chars")
+    raise
 
 
 def generate_ethereum_wallet() -> Tuple[str, str]:
@@ -65,8 +75,21 @@ def decrypt_private_key(encrypted_key: str) -> str:
     Returns:
         str: Decrypted private key
     """
-    decrypted = cipher_suite.decrypt(encrypted_key.encode())
-    return decrypted.decode()
+    try:
+        decrypted = cipher_suite.decrypt(encrypted_key.encode())
+        return decrypted.decode()
+    except Exception as e:
+        error_msg = str(e)
+        if 'Invalid' in error_msg or 'token' in error_msg:
+            raise ValueError(
+                "Cannot decrypt wallet - encryption key has changed. "
+                "This wallet was encrypted with a different key. "
+                "To fix: 1) Copy the WALLET_ENCRYPTION_KEY from backend console startup, "
+                "2) Add it to backend/.env, 3) Restart backend. "
+                "Or re-import your wallet with the current key."
+            )
+        else:
+            raise ValueError(f"Decryption failed: {error_msg}")
 
 
 def get_wallet_balance(address: str, network: str = "mainnet") -> Dict:
