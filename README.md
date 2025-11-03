@@ -2,8 +2,8 @@
 
 **A modern payment gateway bridging traditional finance with cryptocurrency**
 
-![Status](https://img.shields.io/badge/Status-Blockchain%20Integrated-brightgreen)
-![Version](https://img.shields.io/badge/Version-0.2.0--Beta-blue)
+![Status](https://img.shields.io/badge/Status-Production%20Ready%20(Testnet)-brightgreen)
+![Version](https://img.shields.io/badge/Version-0.2.1--Beta-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.120.0-009688)
 
@@ -42,17 +42,17 @@ DPG has its own native utility token ($DPG) providing:
 - See [TOKENOMICS.md](docs/TOKENOMICS.md) for complete details
 - Accept merchant payments (planned)
 
-**Current Status:** ✅ Real blockchain integration complete! Import wallets, send real crypto on Sepolia testnet.
+**Current Status:** ✅ Production-ready on testnet! Nonce errors fixed, auto-status updates, precise amount display.
 
 **See [docs/BLOCKCHAIN_SETUP.md](./docs/BLOCKCHAIN_SETUP.md) for blockchain integration guide.**  
 **See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for detailed progress tracking.**  
-**See [CHANGELOG.md](./CHANGELOG.md) for latest updates (v0.2.0).**
+**See [CHANGELOG.md](./CHANGELOG.md) for latest updates (v0.2.1).**
 
 ---
 
 ## ✨ Features
 
-### ✅ Implemented (v0.2.0 - Blockchain Integrated!)
+### ✅ Implemented (v0.2.1 - Production Ready!)
 
 #### User Authentication
 - Email/password registration with validation
@@ -66,13 +66,18 @@ DPG has its own native utility token ($DPG) providing:
 - **Crypto:** ETH, MATIC, USDT, USDC
 - **Import existing wallets** (MetaMask, Trust Wallet, etc.)
 - **Real blockchain integration** with Web3.py 7.14.0
-- Private key encryption (Fernet)
+- **Enterprise-grade encryption** (PBKDF2 + Fernet)
 - **Sync balance from blockchain** (Sepolia testnet)
 - Wallet creation/deletion
 - Delete empty wallets
+- **Precise balance display** (0.001 shows correctly, not 0.00)
 
-#### Blockchain Transactions
+#### Blockchain Transactions (NEW v0.2.1 🔥)
 - **Real crypto sends** on Sepolia testnet (ETH, MATIC)
+- **Fixed nonce errors** (uses 'pending' nonce, no more conflicts)
+- **20% gas price buffer** (prevents "underpriced" errors)
+- **Rate limiting** (blocks rapid-fire transactions)
+- **Auto-status updates** (pending → completed in 10-15 seconds)
 - Gas fee estimation before sending
 - Transaction hash tracking
 - Etherscan verification links
@@ -81,9 +86,13 @@ DPG has its own native utility token ($DPG) providing:
 
 #### Transactions
 - **Real blockchain sends:** Send ETH/MATIC to any address
-- Transaction history with status tracking
+- **Transaction monitor** (checks blockchain every 10 seconds)
+- **Auto-refresh frontend** (updates every 15 seconds, no manual refresh)
+- Transaction history with **precise amounts** (8 decimals for crypto)
+- **Details column** (network, tx hash links, descriptions)
 - Reference ID support
 - Gas fee display
+- **Disabled send button** during transaction (prevents double-send)
 
 #### Frontend UI
 - Responsive design (Tailwind CSS)
@@ -98,15 +107,16 @@ DPG has its own native utility token ($DPG) providing:
 - Enter key support
 
 ### 🚧 In Progress
-- [ ] Transaction status tracking (Pending → Confirmed)
-- [ ] ERC-20 token support (USDT, USDC)
+- [ ] Export wallet feature (show private key securely)
+- [ ] Proof of reserves system
+- [ ] ERC-20 token support (USDT, USDC on-chain)
 - [ ] Email verification
 
 ### 📋 Planned Features
 - Mainnet deployment (after security audit)
 - Polygon Mumbai testnet support
 - Multi-currency swap (DEX integration)
-- Stripe payment integration
+- Stripe payment integration (fiat on-ramp)
 - KYC verification system
 - Virtual debit cards
 - Merchant accounts
@@ -465,11 +475,21 @@ python db_dashboard.py
 - [x] Gas fee estimation
 - [x] Transaction hash tracking
 - [x] Sync blockchain balance
-- [x] Private key encryption
+- [x] Enterprise-grade encryption (PBKDF2)
 
-### 🚧 Phase 3: Advanced Features (Nov 1-8, 2025) - IN PROGRESS
-- [ ] Transaction status tracking (Pending → Confirmed)
-- [ ] ERC-20 token support (USDT, USDC)
+### ✅ Phase 2.1: Production Polish (Nov 3, 2025) - COMPLETE
+- [x] **Fixed nonce errors** (no more "nonce too low")
+- [x] **Fixed gas price errors** (20% buffer prevents "underpriced")
+- [x] **Transaction monitor** (auto-updates status every 10 seconds)
+- [x] **Frontend auto-refresh** (no manual refresh needed)
+- [x] **Precise amount display** (8 decimals for crypto)
+- [x] **Rate limiting** (prevents rapid-fire transactions)
+- [x] **Better error messages** (user-friendly, emoji-enhanced)
+
+### 🚧 Phase 3: Advanced Features (Nov 4-8, 2025) - IN PROGRESS
+- [ ] Export wallet feature (show private key securely)
+- [ ] Proof of reserves system
+- [ ] ERC-20 token support (USDT, USDC on-chain)
 - [ ] Polygon Mumbai testnet
 - [ ] Email verification (SendGrid)
 - [ ] UI improvements (loading, animations)
@@ -498,17 +518,26 @@ python db_dashboard.py
 
 ## 📊 Current Status
 
-**Version:** 0.2.0-Beta  
-**Major Milestone:** ✅ Real Blockchain Integration Complete!  
-**Completion:** 50% overall  
+**Version:** 0.2.1-Beta  
+**Major Milestone:** ✅ Production-Ready Testnet!  
+**Completion:** 55% overall  
 
-### Latest Achievements (Oct 27, 2025)
+### Latest Achievements (Nov 3, 2025) 🔥
+- ✅ **Fixed all nonce errors** (pending nonce + 20% gas buffer)
+- ✅ **Auto-status updates** (monitor checks every 10 seconds)
+- ✅ **Frontend auto-refresh** (updates every 15 seconds)
+- ✅ **Precise amounts** (0.001 ETH displays correctly)
+- ✅ **Rate limiting** (prevents transaction spam)
+- ✅ **Enhanced UI** (Details column with tx links)
+- ✅ **Better UX** (disabled button during send, no double-clicks)
+
+### Previous Achievements (Oct 27, 2025)
 - ✅ Import wallet feature (MetaMask, Trust Wallet)
 - ✅ Real blockchain sends (Sepolia testnet)
 - ✅ Gas fee estimation
 - ✅ Transaction hash tracking
 - ✅ Sync blockchain balance
-- ✅ Private key encryption (Fernet)
+- ✅ Enterprise encryption (PBKDF2 + Fernet)
 - ✅ Delete wallet functionality
 - ✅ Removed fake deposits/withdrawals
 
@@ -520,15 +549,15 @@ python db_dashboard.py
 ### Components Status
 - ✅ Backend Infrastructure: 100%
 - ✅ Authentication: 100%
-- ✅ Wallets: 95% (import, sync, delete)
-- ✅ Blockchain Integration: 85% (Sepolia working, Mumbai planned)
-- ✅ Transactions: 80% (send working, status tracking needed)
-- ✅ Frontend: 85% (UI polish needed)
+- ✅ Wallets: 95% (import, sync, delete - export coming soon)
+- ✅ Blockchain Integration: 95% (Sepolia production-ready, Mumbai planned)
+- ✅ Transactions: 95% (send working, auto-status updates, nonce fixed)
+- ✅ Frontend: 90% (auto-refresh working, polish ongoing)
 - ⏳ Email: 0% (planned)
 - ❌ KYC: 0% (future)
 - ❌ Trading: 0% (future)
 
-**📖 Full details:** See [CHANGELOG.md](./CHANGELOG.md) for v0.2.0 release notes.
+**📖 Full details:** See [CHANGELOG.md](./CHANGELOG.md) for v0.2.1 release notes.
 
 ---
 
