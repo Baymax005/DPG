@@ -546,3 +546,55 @@ async def sync_wallet_balance(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error syncing balance: {str(e)}"
         )
+
+
+@router.delete("/cleanup-deposits")
+async def cleanup_incorrect_deposits(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Emergency cleanup: Delete auto-generated deposit transactions without tx_hash
+    
+    This removes incorrect deposit records that were auto-created by the monitor.
+    Only deletes deposits that don't have a blockchain transaction hash.
+    """
+    try:
+        from models import Transaction, TransactionType
+        
+        # Find all deposit transactions without tx_hash (auto-generated ones)
+        auto_deposits = db.query(Transaction).filter(
+            Transaction.type == TransactionType.DEPOSIT,
+            Transaction.tx_hash == None,
+            Transaction.wallet_id.in_(
+                db.query(Wallet.id).filter(Wallet.user_id == current_user.id)
+            )
+        ).all()
+        
+        count = len(auto_deposits)
+        
+        if count == 0:
+            return {
+                "message": "No auto-generated deposits found",
+                "deleted_count": 0
+            }
+        
+        # Delete them
+        for tx in auto_deposits:
+            db.delete(tx)
+        
+        db.commit()
+        
+        return {
+            "message": f"✅ Cleaned up {count} incorrect deposit transaction(s)",
+            "deleted_count": count,
+            "note": "Real incoming transactions are tracked when you receive funds"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error during cleanup: {str(e)}"
+        )
+

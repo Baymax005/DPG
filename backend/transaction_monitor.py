@@ -84,8 +84,9 @@ class TransactionMonitor:
                         logger.error(f"❌ Error checking tx {tx.tx_hash}: {e}")
                         continue
             
-            # Also check for incoming transactions to our wallets
-            await self.check_incoming_transactions(db)
+            # Note: Automatic incoming transaction detection is disabled
+            # Use the manual sync endpoint instead: POST /api/v1/wallets/{id}/sync-blockchain
+            # await self.check_incoming_transactions(db)
             
             # Commit all changes
             db.commit()
