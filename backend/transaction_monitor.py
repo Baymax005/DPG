@@ -99,7 +99,7 @@ class TransactionMonitor:
     async def check_incoming_transactions(self, db: Session):
         """Check for incoming transactions to wallet addresses"""
         try:
-            from models import Wallet
+            from models import Wallet, TransactionType
             from decimal import Decimal
             
             # Get all crypto wallets with addresses
@@ -120,37 +120,58 @@ class TransactionMonitor:
                     blockchain = get_blockchain_service(network)
                     
                     # Get current balance from blockchain
-                    current_balance = blockchain.get_balance(wallet.address)
+                    current_blockchain_balance = blockchain.get_balance(wallet.address)
                     
-                    # If balance increased, create a deposit transaction record
-                    if current_balance > wallet.balance:
-                        deposit_amount = current_balance - wallet.balance
+                    # Calculate total deposits and withdrawals from transaction history
+                    total_deposits = Decimal('0')
+                    total_withdrawals = Decimal('0')
+                    
+                    wallet_transactions = db.query(Transaction).filter(
+                        Transaction.wallet_id == wallet.id
+                    ).all()
+                    
+                    for tx in wallet_transactions:
+                        if tx.type == TransactionType.DEPOSIT:
+                            total_deposits += tx.amount
+                        elif tx.type == TransactionType.WITHDRAWAL:
+                            total_withdrawals += (tx.amount + tx.fee)
+                    
+                    # Expected balance = deposits - withdrawals
+                    expected_balance = total_deposits - total_withdrawals
+                    
+                    # If blockchain balance > expected balance, we missed a deposit!
+                    if current_blockchain_balance > expected_balance:
+                        missed_deposit = current_blockchain_balance - expected_balance
                         
-                        logger.info(f"💰 Detected incoming deposit to {wallet.currency_code} wallet!")
-                        logger.info(f"   Address: {wallet.address[:10]}...")
-                        logger.info(f"   Amount: +{deposit_amount} {wallet.currency_code}")
-                        logger.info(f"   Old Balance: {wallet.balance}, New Balance: {current_balance}")
-                        
-                        # Create deposit transaction record
-                        from models import TransactionType
-                        new_tx = Transaction(
-                            wallet_id=wallet.id,
-                            type=TransactionType.DEPOSIT,
-                            amount=Decimal(str(deposit_amount)),
-                            status=TransactionStatus.COMPLETED,
-                            description=f"Incoming {wallet.currency_code} deposit",
-                            network=network,
-                            completed_at=datetime.utcnow()
-                        )
-                        db.add(new_tx)
-                        
-                        # Update wallet balance
-                        wallet.balance = current_balance
-                        
-                        logger.info(f"✅ Created deposit transaction record for +{deposit_amount} {wallet.currency_code}")
+                        # Only create deposit if amount is significant (> 0.000001)
+                        if missed_deposit > Decimal('0.000001'):
+                            logger.info(f"💰 Detected incoming deposit to {wallet.currency_code} wallet!")
+                            logger.info(f"   Address: {wallet.address[:10]}...")
+                            logger.info(f"   Amount: +{missed_deposit} {wallet.currency_code}")
+                            logger.info(f"   Blockchain: {current_blockchain_balance}, Expected: {expected_balance}")
+                            
+                            # Create deposit transaction record
+                            new_tx = Transaction(
+                                wallet_id=wallet.id,
+                                type=TransactionType.DEPOSIT,
+                                amount=Decimal(str(missed_deposit)),
+                                status=TransactionStatus.COMPLETED,
+                                description=f"Incoming {wallet.currency_code} deposit",
+                                network=network,
+                                completed_at=datetime.utcnow()
+                            )
+                            db.add(new_tx)
+                            
+                            logger.info(f"✅ Created deposit transaction record for +{missed_deposit} {wallet.currency_code}")
+                    
+                    # Always sync wallet balance to blockchain
+                    if wallet.balance != current_blockchain_balance:
+                        wallet.balance = current_blockchain_balance
                         
                 except Exception as e:
                     logger.error(f"❌ Error checking incoming for wallet {wallet.id}: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
                     continue
                     
         except Exception as e:
