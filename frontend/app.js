@@ -328,8 +328,12 @@ function displayWallets() {
                     <p class="text-sm text-gray-500">${wallet.currency_code}</p>
                 </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
                 ${wallet.wallet_type === 'crypto' && wallet.address ? `
+                    <button onclick="scanForDeposits('${wallet.id}')" 
+                            class="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-1 px-3 rounded">
+                        📥 Scan Deposits
+                    </button>
                     <button onclick="syncWalletBalance('${wallet.id}')" 
                             class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded">
                         🔄 Sync
@@ -1372,6 +1376,47 @@ function copyReceiveAddress() {
         console.error('Failed to copy:', err);
         alert('❌ Failed to copy address. Please copy manually.');
     });
+}
+
+// Scan for incoming deposits using Etherscan API
+async function scanForDeposits(walletId) {
+    try {
+        const response = await fetch(`${API_URL}/api/v1/transactions/scan-deposits/${walletId}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            if (data.deposits_found > 0) {
+                const depositList = data.deposits.map(d => 
+                    `  💰 ${d.amount} ETH from ${d.from.substring(0, 10)}...`
+                ).join('\n');
+                
+                alert(
+                    `✅ ${data.message}\n\n` +
+                    `Found ${data.deposits_found} deposit(s):\n${depositList}\n\n` +
+                    `Total: ${data.total_amount} ${data.currency}\n` +
+                    `New Balance: ${data.new_balance} ${data.currency}`
+                );
+            } else {
+                alert(`${data.message}\n\n${data.note || ''}`);
+            }
+            
+            // Reload wallets and transactions to show updates
+            await loadWallets();
+            await loadTransactions();
+        } else {
+            alert(`❌ Error: ${data.detail}`);
+        }
+    } catch (error) {
+        console.error('Scan error:', error);
+        alert('❌ Failed to scan for deposits');
+    }
 }
 
 // Clean up incorrect deposit transactions

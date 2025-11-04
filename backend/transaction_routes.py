@@ -17,7 +17,9 @@ from auth_routes import get_current_user
 from transaction_service import TransactionService
 from blockchain_service import get_blockchain_service
 import os
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/transactions", tags=["Transactions"])
 
 
@@ -596,5 +598,134 @@ async def cleanup_incorrect_deposits(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error during cleanup: {str(e)}"
+        )
+
+
+@router.post("/scan-deposits/{wallet_id}")
+async def scan_for_deposits(
+    wallet_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Scan blockchain for incoming deposits using Etherscan API
+    
+    This fetches REAL transaction history from Etherscan and creates
+    deposit records for any incoming transactions we haven't tracked yet.
+    """
+    try:
+        from models import Transaction, TransactionType, TransactionStatus
+        from etherscan_service import get_etherscan_service
+        
+        # Get wallet
+        wallet = db.query(Wallet).filter(
+            Wallet.id == wallet_id,
+            Wallet.user_id == current_user.id
+        ).first()
+        
+        if not wallet:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Wallet not found"
+            )
+        
+        if not wallet.address:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Wallet doesn't have a blockchain address"
+            )
+        
+        # Get network
+        network_map = {
+            "ETH": "sepolia",
+            "MATIC": "mumbai"  # Note: Etherscan doesn't support Mumbai, need Polygonscan
+        }
+        network = network_map.get(wallet.currency_code, "sepolia")
+        
+        if network == "mumbai":
+            return {
+                "message": "⚠️ Polygonscan API needed for MATIC deposits",
+                "note": "Currently only ETH (Sepolia) is supported",
+                "deposits_found": 0
+            }
+        
+        # Get Etherscan service
+        etherscan = get_etherscan_service(network=network)
+        
+        # Fetch incoming deposits from Etherscan
+        deposits = etherscan.get_latest_incoming_deposits(wallet.address)
+        
+        if not deposits:
+            return {
+                "message": "📭 No incoming deposits found on blockchain",
+                "deposits_found": 0
+            }
+        
+        # Check which deposits we already have
+        existing_hashes = set(
+            tx.tx_hash for tx in db.query(Transaction).filter(
+                Transaction.wallet_id == wallet_id,
+                Transaction.tx_hash.isnot(None)
+            ).all()
+        )
+        
+        new_deposits = []
+        for deposit in deposits:
+            if deposit['tx_hash'] not in existing_hashes:
+                # Create new deposit transaction
+                new_tx = Transaction(
+                    wallet_id=wallet_id,
+                    type=TransactionType.DEPOSIT,
+                    amount=deposit['amount'],
+                    fee=Decimal('0'),  # No fee for receiving
+                    status=TransactionStatus.COMPLETED,
+                    tx_hash=deposit['tx_hash'],
+                    network=network,
+                    description=f"Deposit from {deposit['from_address'][:10]}...",
+                    completed_at=deposit['timestamp']
+                )
+                db.add(new_tx)
+                new_deposits.append(deposit)
+        
+        if new_deposits:
+            db.commit()
+            
+            # Update wallet balance from blockchain
+            blockchain = get_blockchain_service(network)
+            wallet.balance = blockchain.get_balance(wallet.address)
+            db.commit()
+            
+            total_amount = sum(d['amount'] for d in new_deposits)
+            
+            return {
+                "message": f"✅ Found {len(new_deposits)} new deposit(s)!",
+                "deposits_found": len(new_deposits),
+                "total_amount": str(total_amount),
+                "currency": wallet.currency_code,
+                "new_balance": str(wallet.balance),
+                "deposits": [
+                    {
+                        "amount": str(d['amount']),
+                        "from": d['from_address'],
+                        "tx_hash": d['tx_hash'],
+                        "date": d['timestamp'].isoformat()
+                    }
+                    for d in new_deposits
+                ]
+            }
+        else:
+            return {
+                "message": "✅ All deposits already tracked",
+                "deposits_found": 0,
+                "note": "No new deposits to add"
+            }
+        
+    except Exception as e:
+        db.rollback()
+        import traceback
+        logger.error(f"Error scanning deposits: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error scanning for deposits: {str(e)}"
         )
 
