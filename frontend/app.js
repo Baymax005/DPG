@@ -277,12 +277,26 @@ async function loadDashboard() {
             showDashboard();
             loadWallets();
             loadTransactions(); // Auto-load transactions on login (starts auto-refresh)
+            
+            // Request notification permission for deposit alerts
+            requestNotificationPermission();
         } else {
             logout();
         }
     } catch (error) {
         console.error('Error loading dashboard:', error);
         logout();
+    }
+}
+
+// Request notification permission for deposit alerts
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                console.log('✅ Notifications enabled for deposit alerts');
+            }
+        });
     }
 }
 
@@ -937,6 +951,9 @@ function startTransactionAutoRefresh() {
     // Auto-refresh every 15 seconds (like MetaMask)
     transactionRefreshInterval = setInterval(async () => {
         try {
+            // Auto-scan for deposits on all crypto wallets (silent background check)
+            await autoScanDeposits();
+            
             // Refresh both wallets and transactions
             await loadWallets();
             
@@ -1381,7 +1398,49 @@ function copyReceiveAddress() {
     });
 }
 
-// Scan for incoming deposits using Etherscan API
+// Auto-scan for deposits in background (silent, no alerts)
+async function autoScanDeposits() {
+    try {
+        // Only scan crypto wallets with addresses
+        const cryptoWallets = wallets.filter(w => 
+            w.wallet_type === 'crypto' && w.address && w.currency_code === 'ETH'
+        );
+        
+        if (cryptoWallets.length === 0) return;
+        
+        // Scan each crypto wallet silently
+        for (const wallet of cryptoWallets) {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/transactions/scan-deposits/${wallet.id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.deposits_found > 0) {
+                    console.log(`💰 Auto-detected ${data.deposits_found} new deposit(s) in ${wallet.currency_code} wallet!`);
+                    // Show desktop notification if supported
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('New Deposit Detected!', {
+                            body: `Received ${data.total_amount} ${data.currency}`,
+                            icon: '/favicon.ico'
+                        });
+                    }
+                }
+            } catch (error) {
+                console.debug(`Silent scan error for wallet ${wallet.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.debug('Auto-scan error:', error);
+    }
+}
+
+// Scan for incoming deposits using Etherscan API (manual button)
 async function scanForDeposits(walletId) {
     try {
         // Show scanning indicator
