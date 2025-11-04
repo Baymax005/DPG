@@ -1374,3 +1374,42 @@ function copyReceiveAddress() {
     });
 }
 
+// Clean up incorrect deposit transactions
+async function cleanupDeposits() {
+    const confirmed = confirm(
+        '🧹 Clean Up Incorrect Deposits\n\n' +
+        'This will delete auto-generated deposit transactions that have wrong amounts.\n\n' +
+        'Only deposits WITHOUT blockchain transaction hashes will be removed.\n' +
+        'Your real withdrawals and properly tracked transactions will NOT be affected.\n\n' +
+        'Continue?'
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/v1/transactions/cleanup-deposits`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`✅ ${data.message}\n\nDeleted: ${data.deleted_count} transaction(s)`);
+            // Reload transactions to show cleaned list
+            await loadTransactions();
+        } else {
+            alert(`❌ Error: ${data.detail}`);
+        }
+    } catch (error) {
+        console.error('Cleanup error:', error);
+        alert('❌ Failed to cleanup deposits');
+    }
+}
+
+
