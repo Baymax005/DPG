@@ -13,6 +13,7 @@ from auth_routes import get_current_user
 from wallet_service import (
     generate_ethereum_wallet,
     encrypt_private_key,
+    decrypt_private_key,
     get_wallet_balance,
     validate_ethereum_address
 )
@@ -349,4 +350,52 @@ async def sync_wallet_from_blockchain(
         "balance": str(blockchain_balance),
         "network": network
     }
+
+
+@router.get("/{wallet_id}/export-private-key")
+async def export_wallet_private_key(
+    wallet_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Export the private key for a wallet
+    
+    ⚠️ WARNING: This is a sensitive operation!
+    Private keys should NEVER be shared and should be stored securely.
+    """
+    wallet = db.query(Wallet).filter(
+        Wallet.id == wallet_id,
+        Wallet.user_id == current_user.id
+    ).first()
+    
+    if not wallet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Wallet not found"
+        )
+    
+    if not wallet.private_key_encrypted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This wallet doesn't have a private key (fiat wallet or imported without key)"
+        )
+    
+    try:
+        # Decrypt the private key
+        private_key = decrypt_private_key(wallet.private_key_encrypted)
+        
+        return {
+            "wallet_id": wallet.id,
+            "currency": wallet.currency_code,
+            "address": wallet.address,
+            "private_key": private_key,
+            "warning": "⚠️ NEVER share your private key with anyone! Anyone with this key has full control of your wallet."
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to decrypt private key: {str(e)}"
+        )
+
 

@@ -332,7 +332,11 @@ function displayWallets() {
                 ${wallet.wallet_type === 'crypto' && wallet.address ? `
                     <button onclick="syncWalletBalance('${wallet.id}')" 
                             class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded">
-                        🔄 Sync Balance
+                        🔄 Sync
+                    </button>
+                    <button onclick="exportPrivateKey('${wallet.id}')" 
+                            class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm py-1 px-3 rounded">
+                        🔑 Export
                     </button>
                 ` : ''}
                 ${parseFloat(wallet.balance) === 0 ? `
@@ -1065,6 +1069,129 @@ async function syncWalletBalance(walletId) {
     } catch (error) {
         console.error('Sync error:', error);
         alert('❌ Failed to sync wallet balance');
+    }
+}
+
+// Export private key for a wallet
+async function exportPrivateKey(walletId) {
+    // First confirmation - warning about security
+    const confirmed = confirm(
+        '⚠️ WARNING: SENSITIVE OPERATION!\n\n' +
+        'You are about to export your private key.\n\n' +
+        '🔐 NEVER share your private key with anyone!\n' +
+        '🔐 Anyone with this key has FULL CONTROL of your wallet!\n' +
+        '🔐 Store it in a secure location!\n\n' +
+        'Do you want to continue?'
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/v1/wallets/${walletId}/export-private-key`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Show private key in a modal with copy functionality
+            showPrivateKeyModal(data);
+        } else {
+            alert(`❌ Error: ${data.detail}`);
+        }
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('❌ Failed to export private key');
+    }
+}
+
+// Show private key in a secure modal
+function showPrivateKeyModal(data) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-red-600 mb-2">⚠️ PRIVATE KEY - KEEP SECURE!</h3>
+                <p class="text-sm text-gray-600">
+                    This is your private key. Anyone with this key has full control of your wallet.
+                </p>
+            </div>
+            
+            <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-4">
+                <p class="font-bold text-yellow-800 mb-2">🔐 Security Warnings:</p>
+                <ul class="text-sm text-yellow-800 list-disc list-inside space-y-1">
+                    <li>NEVER share this key with anyone</li>
+                    <li>NEVER enter it on untrusted websites</li>
+                    <li>Store it in a secure password manager</li>
+                    <li>Write it down and keep in a safe place</li>
+                    <li>Delete any screenshots after securing the key</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2">Wallet Address:</label>
+                <div class="bg-gray-100 p-3 rounded font-mono text-sm break-all">
+                    ${data.address}
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2">Private Key:</label>
+                <div class="bg-gray-100 p-3 rounded font-mono text-sm break-all relative">
+                    <span id="privateKeyText">${data.private_key}</span>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="copyPrivateKey('${data.private_key}')" 
+                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
+                    📋 Copy Private Key
+                </button>
+                <button onclick="closePrivateKeyModal()" 
+                        class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded">
+                    Close
+                </button>
+            </div>
+            
+            <div class="mt-4 text-xs text-gray-500 text-center">
+                Make sure to save this key before closing this window!
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.id = 'privateKeyModal';
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closePrivateKeyModal();
+        }
+    });
+}
+
+// Copy private key to clipboard
+function copyPrivateKey(privateKey) {
+    navigator.clipboard.writeText(privateKey).then(() => {
+        alert('✅ Private key copied to clipboard!\n\n⚠️ Remember to store it securely and clear your clipboard after use.');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('❌ Failed to copy to clipboard. Please select and copy manually.');
+    });
+}
+
+// Close private key modal
+function closePrivateKeyModal() {
+    const modal = document.getElementById('privateKeyModal');
+    if (modal) {
+        modal.remove();
     }
 }
 
