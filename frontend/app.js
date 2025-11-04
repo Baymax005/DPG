@@ -275,11 +275,14 @@ async function loadDashboard() {
             currentUser = await userResponse.json();
             document.getElementById('userEmail').textContent = currentUser.email;
             showDashboard();
-            loadWallets();
+            await loadWallets();
             loadTransactions(); // Auto-load transactions on login (starts auto-refresh)
             
             // Request notification permission for deposit alerts
             requestNotificationPermission();
+            
+            // Auto-sync all crypto wallets on page load (silent)
+            autoSyncAllWallets();
         } else {
             logout();
         }
@@ -287,6 +290,39 @@ async function loadDashboard() {
         console.error('Error loading dashboard:', error);
         logout();
     }
+}
+
+// Auto-sync all crypto wallets on page load (silent, no popups)
+async function autoSyncAllWallets() {
+    const cryptoWallets = wallets.filter(w => 
+        w.wallet_type === 'crypto' && w.address
+    );
+    
+    console.log(`🔄 Auto-syncing ${cryptoWallets.length} crypto wallet(s)...`);
+    
+    for (const wallet of cryptoWallets) {
+        try {
+            const response = await fetch(`${API_URL}/api/v1/transactions/sync-balance/${wallet.id}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                lastSyncTimes[wallet.id] = new Date();
+                console.log(`✅ Synced ${wallet.currency_code}: ${data.old_balance} → ${data.new_balance}`);
+            }
+        } catch (error) {
+            console.debug(`Silent sync error for wallet ${wallet.id}:`, error);
+        }
+    }
+    
+    // Reload wallets to show updated balances
+    await loadWallets();
+    console.log('✅ Auto-sync complete!');
 }
 
 // Request notification permission for deposit alerts
@@ -345,21 +381,25 @@ function displayWallets() {
             <div class="flex flex-wrap gap-2">
                 ${wallet.wallet_type === 'crypto' && wallet.address ? `
                     <button onclick="scanForDeposits('${wallet.id}')" 
-                            class="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-1 px-3 rounded">
+                            title="Scan blockchain for incoming deposits (auto-scans every 15s)"
+                            class="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-1 px-3 rounded transition-all">
                         📥 Scan Deposits
                     </button>
                     <button onclick="syncWalletBalance('${wallet.id}')" 
-                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded">
+                            title="Sync balance from blockchain - Last: ${getLastSyncTime(wallet.id)}"
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded transition-all">
                         🔄 Sync
                     </button>
                     <button onclick="exportPrivateKey('${wallet.id}')" 
-                            class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm py-1 px-3 rounded">
+                            title="Export private key (DANGEROUS - keep secret!)"
+                            class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm py-1 px-3 rounded transition-all">
                         🔑 Export
                     </button>
                 ` : ''}
                 ${parseFloat(wallet.balance) === 0 ? `
                     <button onclick="deleteWallet('${wallet.id}')" 
-                            class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded">
+                            title="Delete empty wallet"
+                            class="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded transition-all">
                         🗑️ Delete
                     </button>
                 ` : ''}
@@ -1070,10 +1110,25 @@ function showError(elementId, message) {
     setTimeout(() => errorDiv.classList.add('hidden'), 5000);
 }
 
-// Sync wallet balance from blockchain
+// Store last sync times for each wallet
+const lastSyncTimes = {};
+
+// Sync wallet balance from blockchain with visual feedback
 async function syncWalletBalance(walletId) {
+    const buttonElement = event?.target;
+    const originalContent = buttonElement?.innerHTML;
+    
     try {
-        const response = await fetch(`${API_URL}/api/v1/wallets/${walletId}/sync-blockchain`, {
+        // Show loading state
+        if (buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '⏳ Syncing...';
+            buttonElement.classList.add('opacity-75', 'cursor-wait');
+        }
+        
+        console.log(`🔄 Syncing wallet ${walletId} with blockchain...`);
+        
+        const response = await fetch(`${API_URL}/api/v1/transactions/sync-balance/${walletId}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -1084,16 +1139,86 @@ async function syncWalletBalance(walletId) {
         const data = await response.json();
 
         if (response.ok) {
-            alert(`✅ ${data.message}\n\nAddress: ${data.address}\nBalance: ${data.balance} ${data.currency}\nNetwork: ${data.network}`);
+            // Store sync time
+            lastSyncTimes[walletId] = new Date();
+            
+            // Show success feedback
+            if (buttonElement) {
+                buttonElement.innerHTML = '✅ Synced!';
+                buttonElement.classList.remove('opacity-75', 'cursor-wait');
+                buttonElement.classList.add('bg-green-600');
+            }
+            
+            console.log(`✅ Sync complete: ${data.old_balance} → ${data.new_balance}`);
+            
             // Reload wallets to show updated balance
             await loadWallets();
+            
+            // Show notification if balance changed
+            const diff = parseFloat(data.difference);
+            if (diff !== 0) {
+                alert(
+                    `✅ Balance Updated!\n\n` +
+                    `Old: ${data.old_balance}\n` +
+                    `New: ${data.new_balance}\n` +
+                    `Change: ${diff > 0 ? '+' : ''}${data.difference}\n\n` +
+                    `Network: ${data.network}`
+                );
+            }
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                if (buttonElement) {
+                    buttonElement.innerHTML = originalContent;
+                    buttonElement.disabled = false;
+                    buttonElement.classList.remove('bg-green-600');
+                }
+            }, 2000);
         } else {
+            // Error state
+            if (buttonElement) {
+                buttonElement.innerHTML = '❌ Failed';
+                buttonElement.classList.remove('opacity-75', 'cursor-wait');
+                buttonElement.classList.add('bg-red-600');
+                
+                setTimeout(() => {
+                    buttonElement.innerHTML = originalContent;
+                    buttonElement.disabled = false;
+                    buttonElement.classList.remove('bg-red-600');
+                }, 2000);
+            }
             alert(`❌ Error: ${data.detail}`);
         }
     } catch (error) {
         console.error('Sync error:', error);
+        
+        // Error state
+        if (buttonElement) {
+            buttonElement.innerHTML = '❌ Failed';
+            buttonElement.classList.remove('opacity-75', 'cursor-wait');
+            buttonElement.classList.add('bg-red-600');
+            
+            setTimeout(() => {
+                buttonElement.innerHTML = originalContent;
+                buttonElement.disabled = false;
+                buttonElement.classList.remove('bg-red-600');
+            }, 2000);
+        }
         alert('❌ Failed to sync wallet balance');
     }
+}
+
+// Get last sync time for a wallet
+function getLastSyncTime(walletId) {
+    const syncTime = lastSyncTimes[walletId];
+    if (!syncTime) return 'Never synced';
+    
+    const now = new Date();
+    const seconds = Math.floor((now - syncTime) / 1000);
+    
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    return `${Math.floor(seconds / 3600)}h ago`;
 }
 
 // Export private key for a wallet
