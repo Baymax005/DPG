@@ -12,6 +12,7 @@ from database import engine, Base
 from auth_routes import router as auth_router
 from wallet_routes import router as wallet_router
 from transaction_routes import router as transaction_router
+from reserves_routes import router as reserves_router
 from transaction_monitor import get_transaction_monitor
 
 # Create database tables
@@ -45,6 +46,9 @@ app.include_router(wallet_router)
 
 # Include transaction routes
 app.include_router(transaction_router)
+
+# Include proof of reserves routes
+app.include_router(reserves_router)
 
 
 # Startup event - Start transaction monitor

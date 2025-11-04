@@ -1045,6 +1045,7 @@ function displayTransactions(transactions) {
                         <th class="px-4 py-2 text-left">Status</th>
                         <th class="px-4 py-2 text-left">Date</th>
                         <th class="px-4 py-2 text-left">Details</th>
+                        <th class="px-4 py-2 text-left">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1075,6 +1076,19 @@ function displayTransactions(transactions) {
                                 ${tx.network ? `<span class="text-blue-600">📡 ${tx.network}</span><br>` : ''}
                                 ${tx.tx_hash ? `<a href="https://sepolia.etherscan.io/tx/${tx.tx_hash}" target="_blank" class="text-purple-600 hover:underline" title="${tx.tx_hash}">🔗 ${shortenAddress(tx.tx_hash, 8, 6)}</a>` : ''}
                                 ${tx.description ? `<span class="text-gray-500">${tx.description}</span>` : ''}
+                            </td>
+                            <td class="px-4 py-3">
+                                <button onclick='viewTransactionReceipt(
+                                    "${tx.tx_hash || 'null'}", 
+                                    "${tx.type.toLowerCase()}", 
+                                    "${formattedAmount}", 
+                                    "${tx.status.toLowerCase()}", 
+                                    "${tx.created_at}", 
+                                    "${formattedFee}",
+                                    "${tx.network || ''}"
+                                )' class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs transition">
+                                    📄 Receipt
+                                </button>
                             </td>
                         </tr>
                         `;
@@ -1649,6 +1663,402 @@ async function cleanupDeposits() {
         console.error('Cleanup error:', error);
         alert('❌ Failed to cleanup deposits');
     }
+}
+
+// ============================================
+// PROOF OF RESERVES
+// ============================================
+
+async function loadProofOfReserves() {
+    try {
+        console.log('🔍 Loading proof of reserves...');
+        const response = await fetch(`${API_URL}/api/v1/reserves/report`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayProofOfReserves(data);
+            
+            // Show section if hidden
+            document.getElementById('reservesSection').classList.remove('hidden');
+        } else {
+            alert('❌ Failed to load proof of reserves');
+        }
+    } catch (error) {
+        console.error('Proof of reserves error:', error);
+        document.getElementById('reservesContent').innerHTML = 
+            '<p class="text-red-500">Failed to load proof of reserves</p>';
+    }
+}
+
+function displayProofOfReserves(data) {
+    const container = document.getElementById('reservesContent');
+    
+    // Build solvency indicators
+    const solvencyHTML = Object.entries(data.solvency).map(([currency, info]) => {
+        const ratio = parseFloat(info.ratio_percent);
+        const isHealthy = ratio >= 100;
+        const colorClass = isHealthy ? 'text-green-600' : 'text-red-600';
+        const bgClass = isHealthy ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+        
+        return `
+            <div class="${bgClass} border-2 rounded-lg p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-lg font-bold">${currency}</h4>
+                    <span class="${colorClass} text-2xl font-bold">${ratio.toFixed(2)}%</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                        <p class="text-gray-600">Reserves:</p>
+                        <p class="font-semibold">${info.reserves} ${currency}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Liabilities:</p>
+                        <p class="font-semibold">${info.liabilities} ${currency}</p>
+                    </div>
+                </div>
+                <div class="mt-2 flex items-center gap-2">
+                    ${isHealthy ? 
+                        '<span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">✅ Fully Reserved</span>' :
+                        '<span class="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">⚠️ Under-Reserved</span>'
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Build Merkle tree info
+    const merkleHTML = Object.entries(data.merkle_trees).map(([currency, tree]) => {
+        if (!tree.merkle_root) return '';
+        
+        return `
+            <div class="bg-gray-50 border rounded-lg p-4">
+                <h5 class="font-bold mb-2">${currency} Merkle Tree</h5>
+                <div class="space-y-1 text-xs">
+                    <p><span class="font-semibold">Root:</span> <code class="bg-white px-2 py-1 rounded">${tree.merkle_root.substring(0, 32)}...</code></p>
+                    <p><span class="font-semibold">Users:</span> ${tree.total_users}</p>
+                    <p><span class="font-semibold">Total Balance:</span> ${tree.total_balance} ${currency}</p>
+                    <p><span class="font-semibold">Tree Height:</span> ${tree.tree_height}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = `
+        <!-- Summary Stats -->
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-6 mb-4">
+            <h4 class="text-xl font-bold mb-4">📊 Platform Statistics</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <p class="text-gray-600 text-sm">Total Users</p>
+                    <p class="text-2xl font-bold text-purple-600">${data.total_users}</p>
+                </div>
+                <div>
+                    <p class="text-gray-600 text-sm">Total Wallets</p>
+                    <p class="text-2xl font-bold text-purple-600">${data.total_wallets}</p>
+                </div>
+                <div>
+                    <p class="text-gray-600 text-sm">Last Updated</p>
+                    <p class="text-sm font-semibold text-gray-700">${new Date(data.timestamp).toLocaleString()}</p>
+                </div>
+                <div>
+                    <p class="text-gray-600 text-sm">Audit Method</p>
+                    <p class="text-sm font-semibold text-gray-700">${data.attestation.method}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Solvency Ratios -->
+        <div class="mb-4">
+            <h4 class="text-lg font-bold mb-3">💰 Solvency Ratios</h4>
+            <div class="grid md:grid-cols-2 gap-4">
+                ${solvencyHTML}
+            </div>
+        </div>
+        
+        <!-- Merkle Trees -->
+        <div class="mb-4">
+            <h4 class="text-lg font-bold mb-3">🌳 Merkle Tree Verification</h4>
+            <div class="grid md:grid-cols-2 gap-4">
+                ${merkleHTML}
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                <i class="fas fa-info-circle"></i> Merkle trees provide cryptographic proof that user balances are included in reserves
+            </p>
+        </div>
+        
+        ${data.onchain_verification ? `
+        <!-- On-Chain Verification -->
+        <div class="mb-4">
+            <h4 class="text-lg font-bold mb-3">⛓️ On-Chain Verification</h4>
+            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 mb-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-2xl">✅</span>
+                    <h5 class="font-bold text-green-900">Blockchain Verified</h5>
+                </div>
+                <p class="text-sm text-green-800 mb-2">
+                    Reserve balances verified directly from ${data.onchain_verification.network} blockchain
+                </p>
+                <p class="text-xs text-green-700">
+                    <i class="fas fa-clock"></i> Verified at: ${new Date(data.onchain_verification.verified_at).toLocaleString()}
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                ${Object.entries(data.onchain_verification.comparison).map(([currency, comp]) => {
+                    const matchPercent = parseFloat(comp.match_percent);
+                    const isVerified = comp.status === 'VERIFIED';
+                    const bgClass = isVerified ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200';
+                    const textClass = isVerified ? 'text-green-800' : 'text-yellow-800';
+                    
+                    return `
+                        <div class="${bgClass} border-2 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <h5 class="font-bold">${currency}</h5>
+                                <span class="${textClass} font-bold">${comp.status}</span>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Database:</span>
+                                    <span class="font-semibold">${comp.database_balance}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">On-Chain:</span>
+                                    <span class="font-semibold">${comp.onchain_balance}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Match:</span>
+                                    <span class="font-bold ${textClass}">${matchPercent.toFixed(2)}%</span>
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-gray-300">
+                                <p class="text-xs text-gray-600 mb-1">Reserve Wallet:</p>
+                                ${comp.reserve_wallets.map(addr => `
+                                    <a href="https://sepolia.etherscan.io/address/${addr}" 
+                                       target="_blank" 
+                                       class="text-xs text-blue-600 hover:underline block truncate">
+                                        ${addr}
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                <i class="fas fa-external-link-alt"></i> Click wallet addresses to verify balances on Etherscan
+            </p>
+        </div>
+        ` : ''}
+        
+        <!-- Transparency Note -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h5 class="font-bold text-blue-900 mb-2">🔍 Full Transparency</h5>
+            <p class="text-sm text-blue-800">
+                This proof of reserves report is publicly available and updated in real-time. 
+                It demonstrates that the platform maintains 100% reserves for all user funds. 
+                Anyone can verify the Merkle tree roots and check reserve wallet addresses on the blockchain.
+            </p>
+        </div>
+    `;
+}
+
+// ============================================
+// TRANSACTION RECEIPT
+// ============================================
+
+function viewTransactionReceipt(txHash, type, amount, status, date, fee, network) {
+    const modal = document.getElementById('transactionReceiptModal');
+    const content = document.getElementById('receiptContent');
+    
+    // Determine explorer URL
+    const explorerMap = {
+        'sepolia': `https://sepolia.etherscan.io/tx/${txHash}`,
+        'ethereum': `https://etherscan.io/tx/${txHash}`,
+        'mumbai': `https://mumbai.polygonscan.com/tx/${txHash}`,
+        'polygon': `https://polygonscan.com/tx/${txHash}`
+    };
+    
+    const explorerUrl = explorerMap[network?.toLowerCase()] || '#';
+    const hasBlockchain = txHash && txHash !== 'null';
+    
+    content.innerHTML = `
+        <div class="space-y-6">
+            <!-- DPG Elegant Branding Header -->
+            <div class="bg-gradient-to-br from-purple-600 via-purple-500 to-blue-500 text-white py-8 px-6 rounded-t-lg -mx-8 -mt-8 mb-6 shadow-2xl">
+                <div class="flex items-center justify-center gap-3 mb-3">
+                    <div class="bg-white bg-opacity-20 p-3 rounded-lg backdrop-blur-sm">
+                        <span class="text-4xl">💳</span>
+                    </div>
+                    <div class="text-left">
+                        <h2 class="text-4xl font-bold tracking-wider">DPG</h2>
+                        <p class="text-sm opacity-90 tracking-wide">Digital Payment Gateway</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center gap-2 text-xs opacity-90 mt-3">
+                    <span>🔒 Secure</span>
+                    <span>•</span>
+                    <span>⛓️ Transparent</span>
+                    <span>•</span>
+                    <span>🌐 Decentralized</span>
+                </div>
+            </div>
+            
+            <!-- Transaction Type Header -->
+            <div class="text-center pb-4 border-b-2 border-gray-200">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br ${
+                    type === 'deposit' ? 'from-green-400 to-emerald-500' :
+                    type === 'withdrawal' ? 'from-red-400 to-pink-500' :
+                    'from-blue-400 to-indigo-500'
+                } rounded-full mb-3 shadow-lg">
+                    <span class="text-4xl">${type === 'deposit' ? '📥' : type === 'withdrawal' ? '📤' : '🔄'}</span>
+                </div>
+                <h4 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    ${type.toUpperCase()} RECEIPT
+                </h4>
+                <p class="text-sm text-gray-500 mt-2">
+                    <i class="fas fa-calendar-alt mr-1"></i>${new Date(date).toLocaleString()}
+                </p>
+            </div>
+            
+            <!-- Amount -->
+            <div class="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 border-2 border-purple-200 rounded-xl p-8 text-center shadow-lg">
+                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Transaction Amount</p>
+                <p class="text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                    ${amount}
+                </p>
+                ${fee > 0 ? `
+                    <div class="mt-4 pt-4 border-t border-gray-300">
+                        <p class="text-xs text-gray-500 uppercase tracking-wide">Network Fee</p>
+                        <p class="text-lg font-semibold text-gray-700">${fee}</p>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <!-- Status -->
+            <div class="flex items-center justify-center gap-3">
+                <div class="px-6 py-3 rounded-full text-lg font-bold shadow-lg ${
+                    status === 'completed' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
+                    status === 'pending' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
+                    'bg-gradient-to-r from-red-400 to-pink-500 text-white'
+                }">
+                    <span class="mr-2">${status === 'completed' ? '✅' : status === 'pending' ? '⏳' : '❌'}</span>
+                    ${status.toUpperCase()}
+                </div>
+            </div>
+            
+            ${hasBlockchain ? `
+                <!-- Transaction Hash -->
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-5 shadow-sm">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fas fa-fingerprint"></i>Transaction Hash
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <code class="flex-1 bg-white px-4 py-3 rounded-lg text-xs break-all border border-gray-300 font-mono text-gray-700">${txHash}</code>
+                        <button onclick="copyToClipboard('${txHash}')" 
+                                class="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 py-3 rounded-lg text-sm font-semibold shadow-md transition-all">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- QR Code -->
+                <div class="text-center bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center justify-center gap-2">
+                        <i class="fas fa-qrcode"></i>Transaction QR Code
+                    </p>
+                    <div id="receiptQRCode" class="inline-block bg-white p-3 rounded-lg border-4 border-purple-200"></div>
+                    <p class="text-xs text-gray-500 mt-3">Scan to view on blockchain explorer</p>
+                </div>
+                
+                <!-- Blockchain Explorer -->
+                <div class="text-center">
+                    <a href="${explorerUrl}" target="_blank" 
+                       class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg transition-all transform hover:scale-105">
+                        <i class="fas fa-external-link-alt"></i>
+                        View on ${network || 'Etherscan'}
+                    </a>
+                </div>
+            ` : ''}
+            
+            <!-- Actions -->
+            <div class="flex gap-3 pt-6 border-t-2 border-gray-200">
+                <button onclick="printReceipt()" 
+                        class="flex-1 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-white py-3 rounded-xl font-bold shadow-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2">
+                    <i class="fas fa-print"></i>Print Receipt
+                </button>
+                <button onclick="closeTransactionReceipt()" 
+                        class="flex-1 bg-gradient-to-r from-gray-300 to-gray-400 hover:from-gray-400 hover:to-gray-500 text-gray-800 py-3 rounded-xl font-bold shadow-lg transition-all transform hover:scale-105">
+                    Close
+                </button>
+            </div>
+            
+            <!-- Elegant DPG Footer Branding -->
+            <div class="text-center pt-6 pb-2">
+                <div class="inline-block bg-gradient-to-r from-purple-50 to-blue-50 px-8 py-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <div class="bg-gradient-to-br from-purple-600 to-blue-600 p-2 rounded-lg">
+                            <span class="text-2xl">💳</span>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">DPG</p>
+                            <p class="text-xs text-gray-600">Digital Payment Gateway</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center gap-2 text-xs text-gray-500 mt-3 pt-3 border-t border-gray-300">
+                        <i class="fas fa-shield-alt text-green-500"></i>
+                        <span>Secure</span>
+                        <span>•</span>
+                        <i class="fas fa-link text-blue-500"></i>
+                        <span>Transparent</span>
+                        <span>•</span>
+                        <i class="fas fa-globe text-purple-500"></i>
+                        <span>Decentralized</span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">© 2025 DPG. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Generate QR code if blockchain transaction
+    if (hasBlockchain) {
+        setTimeout(() => {
+            const qrContainer = document.getElementById('receiptQRCode');
+            if (qrContainer) {
+                try {
+                    new QRCode(qrContainer, {
+                        text: explorerUrl,
+                        width: 150,
+                        height: 150,
+                        colorDark: "#5b21b6",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } catch (error) {
+                    console.error('QR generation error:', error);
+                }
+            }
+        }, 100);
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function closeTransactionReceipt() {
+    document.getElementById('transactionReceiptModal').classList.add('hidden');
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Copied to clipboard!');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('❌ Failed to copy');
+    });
+}
+
+function printReceipt() {
+    window.print();
 }
 
 
