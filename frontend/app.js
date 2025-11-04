@@ -276,7 +276,7 @@ async function loadDashboard() {
             document.getElementById('userEmail').textContent = currentUser.email;
             showDashboard();
             loadWallets();
-            loadTransactions(); // Auto-load transactions on login
+            loadTransactions(); // Auto-load transactions on login (starts auto-refresh)
         } else {
             logout();
         }
@@ -934,9 +934,12 @@ function startTransactionAutoRefresh() {
         clearInterval(transactionRefreshInterval);
     }
     
-    // Auto-refresh every 15 seconds
+    // Auto-refresh every 15 seconds (like MetaMask)
     transactionRefreshInterval = setInterval(async () => {
         try {
+            // Refresh both wallets and transactions
+            await loadWallets();
+            
             const response = await fetch(`${API_URL}/api/v1/transactions/history?limit=20`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
@@ -944,14 +947,14 @@ function startTransactionAutoRefresh() {
             if (response.ok) {
                 const transactions = await response.json();
                 displayTransactions(transactions);
-                console.log('🔄 Transactions auto-refreshed');
+                console.log('🔄 Auto-refreshed: wallets & transactions');
             }
         } catch (error) {
             console.error('Auto-refresh error:', error);
         }
     }, 15000); // 15 seconds
     
-    console.log('✅ Auto-refresh enabled (every 15 seconds)');
+    console.log('✅ Auto-refresh enabled: wallets & transactions (every 15s)');
 }
 
 // Stop auto-refresh
@@ -1381,6 +1384,9 @@ function copyReceiveAddress() {
 // Scan for incoming deposits using Etherscan API
 async function scanForDeposits(walletId) {
     try {
+        // Show scanning indicator
+        console.log('🔍 Scanning blockchain for deposits...');
+        
         const response = await fetch(`${API_URL}/api/v1/transactions/scan-deposits/${walletId}`, {
             method: 'POST',
             headers: {
@@ -1392,6 +1398,14 @@ async function scanForDeposits(walletId) {
         const data = await response.json();
 
         if (response.ok) {
+            // Immediately reload wallets and transactions BEFORE showing alert
+            console.log('🔄 Refreshing data...');
+            await Promise.all([
+                loadWallets(),
+                loadTransactions()
+            ]);
+            
+            // Then show results
             if (data.deposits_found > 0) {
                 const depositList = data.deposits.map(d => 
                     `  💰 ${d.amount} ETH from ${d.from.substring(0, 10)}...`
@@ -1406,10 +1420,6 @@ async function scanForDeposits(walletId) {
             } else {
                 alert(`${data.message}\n\n${data.note || ''}`);
             }
-            
-            // Reload wallets and transactions to show updates
-            await loadWallets();
-            await loadTransactions();
         } else {
             alert(`❌ Error: ${data.detail}`);
         }

@@ -7,6 +7,10 @@ import logging
 from typing import List, Dict, Optional
 from decimal import Decimal
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

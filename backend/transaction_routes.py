@@ -613,9 +613,11 @@ async def scan_for_deposits(
     This fetches REAL transaction history from Etherscan and creates
     deposit records for any incoming transactions we haven't tracked yet.
     """
+    logger.info(f"🔍 Starting deposit scan for wallet {wallet_id}")
     try:
         from models import Transaction, TransactionType, TransactionStatus
         from etherscan_service import get_etherscan_service
+        import os
         
         # Get wallet
         wallet = db.query(Wallet).filter(
@@ -649,11 +651,16 @@ async def scan_for_deposits(
                 "deposits_found": 0
             }
         
-        # Get Etherscan service
-        etherscan = get_etherscan_service(network=network)
+        # Get Etherscan service with API key from environment
+        api_key = os.getenv('ETHERSCAN_API_KEY')
+        logger.info(f"📡 Using Etherscan API key: {api_key[:10]}..." if api_key else "⚠️ No API key found!")
+        
+        etherscan = get_etherscan_service(api_key=api_key, network=network)
         
         # Fetch incoming deposits from Etherscan
+        logger.info(f"🔎 Scanning blockchain for deposits to {wallet.address[:10]}...")
         deposits = etherscan.get_latest_incoming_deposits(wallet.address)
+        logger.info(f"📊 Found {len(deposits)} deposits from Etherscan")
         
         if not deposits:
             return {
