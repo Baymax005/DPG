@@ -26,14 +26,17 @@ class EtherscanService:
         self.api_key = api_key
         self.network = network
         
-        # API endpoints for different networks
-        self.base_urls = {
-            "mainnet": "https://api.etherscan.io/api",
-            "sepolia": "https://api-sepolia.etherscan.io/api",
-            "goerli": "https://api-goerli.etherscan.io/api",
+        # V2 API - single unified endpoint for all chains
+        self.base_url = "https://api.etherscan.io/v2/api"
+        
+        # Chain IDs for different networks
+        self.chain_ids = {
+            "mainnet": "1",
+            "sepolia": "11155111",
+            "holesky": "17000",
         }
         
-        self.base_url = self.base_urls.get(network, self.base_urls["sepolia"])
+        self.chain_id = self.chain_ids.get(network, self.chain_ids["sepolia"])
     
     def get_normal_transactions(self, address: str, startblock: int = 0, endblock: int = 99999999) -> List[Dict]:
         """
@@ -49,6 +52,7 @@ class EtherscanService:
         """
         try:
             params = {
+                "chainid": self.chain_id,  # V2 requires chainid
                 "module": "account",
                 "action": "txlist",
                 "address": address,
