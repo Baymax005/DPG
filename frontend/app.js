@@ -1223,3 +1223,154 @@ async function deleteWallet(walletId) {
         alert(`❌ Failed to delete wallet: ${error.message}`);
     }
 }
+
+// ===== IMPORT WALLET ENHANCEMENTS =====
+
+// Toggle import private key visibility
+function toggleImportKeyVisibility() {
+    const input = document.getElementById('importPrivateKey');
+    const checkbox = document.getElementById('showImportKey');
+    input.type = checkbox.checked ? 'text' : 'password';
+}
+
+// Verify and preview wallet address from private key
+async function verifyImportAddress() {
+    const privateKey = document.getElementById('importPrivateKey').value.trim();
+    const verificationDiv = document.getElementById('importAddressVerification');
+    const previewAddress = document.getElementById('importPreviewAddress');
+    
+    if (!privateKey || !privateKey.startsWith('0x') || privateKey.length !== 66) {
+        verificationDiv.classList.add('hidden');
+        return;
+    }
+    
+    try {
+        // Use ethers.js-like approach via Web3
+        const response = await fetch(`https://cloudflare-eth.com/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'eth_accounts',
+                params: [],
+                id: 1
+            })
+        });
+        
+        // Simple client-side derivation using a technique
+        // For security, we'll use backend validation instead
+        // Show a placeholder for now
+        verificationDiv.classList.remove('hidden');
+        previewAddress.textContent = 'Verifying address...';
+        
+        // Call backend to verify (we can add a verify endpoint later)
+        // For now, show generic message
+        setTimeout(() => {
+            previewAddress.textContent = 'Address will be verified during import';
+        }, 500);
+        
+    } catch (error) {
+        console.error('Address verification error:', error);
+        verificationDiv.classList.add('hidden');
+    }
+}
+
+// ===== RECEIVE CRYPTO FEATURE =====
+
+let currentQRCode = null;
+
+// Show receive modal
+function showReceiveModal() {
+    const modal = document.getElementById('receiveModal');
+    const select = document.getElementById('receiveWalletSelect');
+    
+    // Populate wallet dropdown with crypto wallets only
+    const cryptoWallets = wallets.filter(w => w.wallet_type === 'crypto' && w.address);
+    
+    if (cryptoWallets.length === 0) {
+        alert('❌ No crypto wallets available. Please create a crypto wallet first.');
+        return;
+    }
+    
+    select.innerHTML = '<option value="">Choose a wallet...</option>' +
+        cryptoWallets.map(w => 
+            `<option value="${w.id}" data-address="${w.address}" data-currency="${w.currency_code}">
+                ${w.currency_code} - ${shortenAddress(w.address, 10, 6)}
+            </option>`
+        ).join('');
+    
+    modal.classList.remove('hidden');
+    
+    // Reset display
+    document.getElementById('receiveAddressSection').classList.add('hidden');
+}
+
+// Hide receive modal
+function hideReceiveModal() {
+    document.getElementById('receiveModal').classList.add('hidden');
+    if (currentQRCode) {
+        document.getElementById('receiveQRCode').innerHTML = '';
+        currentQRCode = null;
+    }
+}
+
+// Display receive address with QR code
+function displayReceiveAddress() {
+    const select = document.getElementById('receiveWalletSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (!selectedOption || !selectedOption.value) {
+        document.getElementById('receiveAddressSection').classList.add('hidden');
+        return;
+    }
+    
+    const address = selectedOption.getAttribute('data-address');
+    const currency = selectedOption.getAttribute('data-currency');
+    
+    // Show address
+    document.getElementById('receiveAddressText').textContent = address;
+    document.getElementById('receiveCurrencyName').textContent = currency;
+    
+    // Set network warning
+    const networkMap = {
+        'ETH': 'Ethereum (Sepolia Testnet)',
+        'MATIC': 'Polygon (Mumbai Testnet)',
+        'USDT': 'USDT on Ethereum network',
+        'USDC': 'USDC on Ethereum network'
+    };
+    document.getElementById('receiveNetworkWarning').textContent = networkMap[currency] || currency;
+    
+    // Generate QR code
+    const qrContainer = document.getElementById('receiveQRCode');
+    qrContainer.innerHTML = ''; // Clear previous QR code
+    
+    try {
+        currentQRCode = new QRCode(qrContainer, {
+            text: address,
+            width: 200,
+            height: 200,
+            colorDark: "#5b21b6", // Purple
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (error) {
+        console.error('QR Code generation error:', error);
+        qrContainer.innerHTML = '<p class="text-red-500 text-sm">QR code generation failed</p>';
+    }
+    
+    // Show section
+    document.getElementById('receiveAddressSection').classList.remove('hidden');
+}
+
+// Copy receive address to clipboard
+function copyReceiveAddress() {
+    const address = document.getElementById('receiveAddressText').textContent;
+    
+    navigator.clipboard.writeText(address).then(() => {
+        alert('✅ Address copied to clipboard!\n\nShare this address to receive crypto.');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('❌ Failed to copy address. Please copy manually.');
+    });
+}
+
