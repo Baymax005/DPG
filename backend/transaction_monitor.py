@@ -51,41 +51,41 @@ class TransactionMonitor:
                 Transaction.tx_hash.isnot(None)
             ).all()
             
-            if not pending_txs:
-                logger.debug("No pending transactions to check")
-                return
-            
-            logger.info(f"📋 Checking {len(pending_txs)} pending transaction(s)")
-            
-            for tx in pending_txs:
-                try:
-                    # Get network from transaction (default to sepolia)
-                    network = tx.network or 'sepolia'
-                    
-                    # Get blockchain service
-                    blockchain = get_blockchain_service(network)
-                    
-                    # Check transaction status on blockchain
-                    status_info = blockchain.get_transaction_status(tx.tx_hash)
-                    
-                    # Update if status changed
-                    if status_info['status'] == 'confirmed':
-                        tx.status = TransactionStatus.COMPLETED
-                        tx.completed_at = datetime.utcnow()
-                        logger.info(f"✅ Transaction {tx.tx_hash[:10]}... confirmed!")
+            if pending_txs:
+                logger.info(f"📋 Checking {len(pending_txs)} pending transaction(s)")
+                
+                for tx in pending_txs:
+                    try:
+                        # Get network from transaction (default to sepolia)
+                        network = tx.network or 'sepolia'
                         
-                    elif status_info['status'] == 'failed':
-                        tx.status = TransactionStatus.FAILED
-                        tx.completed_at = datetime.utcnow()
-                        logger.warning(f"❌ Transaction {tx.tx_hash[:10]}... failed")
-                    
-                    # Still pending - log confirmations
-                    elif status_info['status'] == 'pending':
-                        logger.debug(f"⏳ Transaction {tx.tx_hash[:10]}... still pending")
-                    
-                except Exception as e:
-                    logger.error(f"❌ Error checking tx {tx.tx_hash}: {e}")
-                    continue
+                        # Get blockchain service
+                        blockchain = get_blockchain_service(network)
+                        
+                        # Check transaction status on blockchain
+                        status_info = blockchain.get_transaction_status(tx.tx_hash)
+                        
+                        # Update if status changed
+                        if status_info['status'] == 'confirmed':
+                            tx.status = TransactionStatus.COMPLETED
+                            tx.completed_at = datetime.utcnow()
+                            logger.info(f"✅ Transaction {tx.tx_hash[:10]}... confirmed!")
+                            
+                        elif status_info['status'] == 'failed':
+                            tx.status = TransactionStatus.FAILED
+                            tx.completed_at = datetime.utcnow()
+                            logger.warning(f"❌ Transaction {tx.tx_hash[:10]}... failed")
+                        
+                        # Still pending - log confirmations
+                        elif status_info['status'] == 'pending':
+                            logger.debug(f"⏳ Transaction {tx.tx_hash[:10]}... still pending")
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Error checking tx {tx.tx_hash}: {e}")
+                        continue
+            
+            # Also check for incoming transactions to our wallets
+            await self.check_incoming_transactions(db)
             
             # Commit all changes
             db.commit()
@@ -95,6 +95,66 @@ class TransactionMonitor:
             db.rollback()
         finally:
             db.close()
+    
+    async def check_incoming_transactions(self, db: Session):
+        """Check for incoming transactions to wallet addresses"""
+        try:
+            from models import Wallet
+            from decimal import Decimal
+            
+            # Get all crypto wallets with addresses
+            wallets = db.query(Wallet).filter(
+                Wallet.address.isnot(None)
+            ).all()
+            
+            for wallet in wallets:
+                try:
+                    # Determine network from currency
+                    network_map = {
+                        "ETH": "sepolia",
+                        "MATIC": "mumbai"
+                    }
+                    network = network_map.get(wallet.currency_code, "sepolia")
+                    
+                    # Get blockchain service
+                    blockchain = get_blockchain_service(network)
+                    
+                    # Get current balance from blockchain
+                    current_balance = blockchain.get_balance(wallet.address)
+                    
+                    # If balance increased, create a deposit transaction record
+                    if current_balance > wallet.balance:
+                        deposit_amount = current_balance - wallet.balance
+                        
+                        logger.info(f"💰 Detected incoming deposit to {wallet.currency_code} wallet!")
+                        logger.info(f"   Address: {wallet.address[:10]}...")
+                        logger.info(f"   Amount: +{deposit_amount} {wallet.currency_code}")
+                        logger.info(f"   Old Balance: {wallet.balance}, New Balance: {current_balance}")
+                        
+                        # Create deposit transaction record
+                        from models import TransactionType
+                        new_tx = Transaction(
+                            wallet_id=wallet.id,
+                            type=TransactionType.DEPOSIT,
+                            amount=Decimal(str(deposit_amount)),
+                            status=TransactionStatus.COMPLETED,
+                            description=f"Incoming {wallet.currency_code} deposit",
+                            network=network,
+                            completed_at=datetime.utcnow()
+                        )
+                        db.add(new_tx)
+                        
+                        # Update wallet balance
+                        wallet.balance = current_balance
+                        
+                        logger.info(f"✅ Created deposit transaction record for +{deposit_amount} {wallet.currency_code}")
+                        
+                except Exception as e:
+                    logger.error(f"❌ Error checking incoming for wallet {wallet.id}: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"❌ Error in check_incoming_transactions: {e}")
     
     def stop(self):
         """Stop monitoring loop"""
