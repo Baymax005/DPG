@@ -138,10 +138,13 @@ async def server_error_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
+    # Get environment
+    is_production = os.getenv("NODE_ENV", "development") == "production"
+    
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=9000,  # Changed to port 9000
-        reload=True,  # Auto-reload on code changes
+        reload=not is_production,  # Only auto-reload in development (DISABLE for stable sessions)
         log_level="info"
     )

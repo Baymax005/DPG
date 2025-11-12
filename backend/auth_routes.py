@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
 import re
+import os
 
 from database import get_db
 from models import User
@@ -15,8 +16,9 @@ from auth_utils import hash_password, verify_password, create_access_token, veri
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
-# Token expiry
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# Token expiry - 24 hours for development, configurable via environment
+# In production, use shorter time (30-60 minutes) with refresh token mechanism
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours default
 
 
 # Dependency for protected routes

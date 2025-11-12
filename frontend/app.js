@@ -5,6 +5,38 @@ let currentUser = null;
 let wallets = [];
 
 // ============================================
+// API HELPER WITH ERROR HANDLING
+// ============================================
+
+/**
+ * Enhanced fetch wrapper with automatic 401 handling
+ * @param {string} url - API endpoint URL
+ * @param {Object} options - Fetch options
+ * @returns {Promise<Response>} - Fetch response
+ */
+async function apiFetch(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        
+        // Auto-logout only on 401 Unauthorized
+        if (response.status === 401) {
+            console.warn('⚠️ Session expired (401) - logging out');
+            logout();
+            throw new Error('Session expired. Please login again.');
+        }
+        
+        return response;
+    } catch (error) {
+        // Don't logout on network errors
+        if (error.message.includes('Session expired')) {
+            throw error; // Re-throw 401 error
+        }
+        console.error('❌ API Error:', error);
+        throw error;
+    }
+}
+
+// ============================================
 // FORMATTING UTILITIES
 // ============================================
 
@@ -283,12 +315,19 @@ async function loadDashboard() {
             
             // Auto-sync all crypto wallets on page load (silent)
             autoSyncAllWallets();
-        } else {
+        } else if (userResponse.status === 401) {
+            // Only logout on 401 Unauthorized (token expired/invalid)
+            console.warn('⚠️ Session expired or invalid token');
             logout();
+        } else {
+            // For other errors, show error but don't logout
+            console.error('❌ Error loading dashboard:', userResponse.status);
+            alert('Unable to load dashboard. Please try refreshing the page.');
         }
     } catch (error) {
-        console.error('Error loading dashboard:', error);
-        logout();
+        console.error('❌ Network error loading dashboard:', error);
+        // Don't logout on network errors - just show message
+        alert('⚠️ Network error. Check your connection and try again.');
     }
 }
 
