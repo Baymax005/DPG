@@ -2192,6 +2192,9 @@ function viewTransactionReceipt(txHash, type, amount, status, date, fee, network
     const modal = document.getElementById('transactionReceiptModal');
     const content = document.getElementById('receiptContent');
     
+    // Normalize network (handle empty strings and null)
+    const normalizedNetwork = network && network.trim() !== '' ? network.toLowerCase() : 'sepolia';
+    
     // Determine explorer URL
     const explorerMap = {
         'sepolia': `https://sepolia.etherscan.io/tx/${txHash}`,
@@ -2200,8 +2203,8 @@ function viewTransactionReceipt(txHash, type, amount, status, date, fee, network
         'polygon': `https://polygonscan.com/tx/${txHash}`
     };
     
-    const explorerUrl = explorerMap[network?.toLowerCase()] || '#';
-    const hasBlockchain = txHash && txHash !== 'null';
+    const explorerUrl = explorerMap[normalizedNetwork] || `https://sepolia.etherscan.io/tx/${txHash}`;
+    const hasBlockchain = txHash && txHash !== 'null' && txHash !== '';
     
     content.innerHTML = `
         <div class="space-y-6">
@@ -2294,10 +2297,10 @@ function viewTransactionReceipt(txHash, type, amount, status, date, fee, network
                 
                 <!-- Blockchain Explorer -->
                 <div class="text-center">
-                    <a href="${explorerUrl}" target="_blank" 
+                    <a href="${explorerUrl}" target="_blank" rel="noopener noreferrer"
                        class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg transition-all transform hover:scale-105">
                         <i class="fas fa-external-link-alt"></i>
-                        View on ${network || 'Etherscan'}
+                        View on ${normalizedNetwork === 'mumbai' ? 'Polygonscan' : 'Etherscan'}
                     </a>
                 </div>
             ` : ''}

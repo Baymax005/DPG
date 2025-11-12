@@ -640,15 +640,83 @@ async def scan_for_deposits(
         # Get network
         network_map = {
             "ETH": "sepolia",
-            "MATIC": "mumbai"  # Note: Etherscan doesn't support Mumbai, need Polygonscan
+            "MATIC": "mumbai"
         }
         network = network_map.get(wallet.currency_code, "sepolia")
         
+        # For Mumbai/MATIC, use TransactionScanner instead of Etherscan
         if network == "mumbai":
+            logger.info(f"🟣 Using TransactionScanner for Mumbai/MATIC deposits")
+            from transaction_scanner import TransactionScanner
+            
+            scanner = TransactionScanner(network='mumbai')
+            
+            # Get the last block we scanned (or start from recent blocks)
+            last_tx = db.query(Transaction).filter(
+                Transaction.wallet_id == wallet_id,
+                Transaction.type == TransactionType.DEPOSIT,
+                Transaction.tx_hash.isnot(None)
+            ).order_by(Transaction.created_at.desc()).first()
+            
+            from_block = 0  # Will scan last 10000 blocks by default
+            if last_tx and hasattr(last_tx, 'block_number') and last_tx.block_number:
+                from_block = int(last_tx.block_number) + 1
+            
+            # Scan blockchain for incoming transactions
+            logger.info(f"🔎 Scanning Mumbai blockchain for MATIC deposits to {wallet.address[:10]}...")
+            deposits = scanner.get_incoming_transactions(wallet.address, from_block=from_block)
+            logger.info(f"📊 Found {len(deposits)} MATIC deposits from blockchain")
+            
+            if not deposits:
+                return {
+                    "message": "📭 No incoming MATIC deposits found on Mumbai blockchain",
+                    "deposits_found": 0
+                }
+            
+            # Check which deposits we already have
+            existing_hashes = set(
+                tx.tx_hash for tx in db.query(Transaction).filter(
+                    Transaction.wallet_id == wallet_id,
+                    Transaction.tx_hash.isnot(None)
+                ).all()
+            )
+            
+            new_deposits = []
+            for deposit in deposits:
+                if deposit['tx_hash'] not in existing_hashes:
+                    # Create transaction record
+                    tx = Transaction(
+                        wallet_id=wallet_id,
+                        type=TransactionType.DEPOSIT,
+                        amount=float(deposit['amount']),
+                        currency_code='MATIC',
+                        status=TransactionStatus.COMPLETED,
+                        tx_hash=deposit['tx_hash'],
+                        description=f"MATIC deposit from {deposit['from_address'][:10]}...",
+                        network='mumbai'
+                    )
+                    db.add(tx)
+                    
+                    # Update wallet balance
+                    wallet.balance += Decimal(str(deposit['amount']))
+                    
+                    new_deposits.append({
+                        'amount': str(deposit['amount']),
+                        'tx_hash': deposit['tx_hash'],
+                        'from': deposit['from_address']
+                    })
+                    
+                    logger.info(f"✅ Added MATIC deposit: {deposit['amount']} MATIC (tx: {deposit['tx_hash'][:10]}...)")
+            
+            if new_deposits:
+                db.commit()
+                logger.info(f"💾 Saved {len(new_deposits)} new MATIC deposits to database")
+            
             return {
-                "message": "⚠️ Polygonscan API needed for MATIC deposits",
-                "note": "Currently only ETH (Sepolia) is supported",
-                "deposits_found": 0
+                "message": f"✅ Scan complete! Found {len(new_deposits)} new MATIC deposits",
+                "deposits_found": len(new_deposits),
+                "new_deposits": new_deposits,
+                "network": "mumbai"
             }
         
         # Get Etherscan service with API key from environment

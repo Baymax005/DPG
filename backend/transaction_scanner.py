@@ -1,6 +1,7 @@
 """
 Transaction Scanner using Infura RPC
-Scans blockchain for incoming ETH transfers using eth_getLogs
+Scans blockchain for incoming ETH/MATIC transfers using eth_getLogs
+Supports multiple networks: Sepolia (ETH), Mumbai (MATIC)
 """
 from web3 import Web3
 import logging
@@ -19,13 +20,42 @@ logger = logging.getLogger(__name__)
 class TransactionScanner:
     """Scan blockchain for transactions using Web3/Infura"""
     
-    def __init__(self, rpc_url: str = None):
-        """Initialize scanner with Web3 provider"""
-        if rpc_url is None:
-            rpc_url = os.getenv("SEPOLIA_RPC_URL", "https://sepolia.infura.io/v3/01888b56d7994053a61d869173139fb2")
+    # Network configurations
+    NETWORKS = {
+        'sepolia': {
+            'rpc_url': os.getenv("SEPOLIA_RPC_URL", "https://sepolia.infura.io/v3/01888b56d7994053a61d869173139fb2"),
+            'name': 'Sepolia Testnet',
+            'currency': 'ETH'
+        },
+        'mumbai': {
+            'rpc_url': os.getenv("MUMBAI_RPC_URL", "https://polygon-mumbai.infura.io/v3/01888b56d7994053a61d869173139fb2"),
+            'name': 'Mumbai Testnet',
+            'currency': 'MATIC'
+        }
+    }
+    
+    def __init__(self, network: str = 'sepolia', rpc_url: str = None):
+        """
+        Initialize scanner with Web3 provider
         
-        self.w3 = Web3(Web3.HTTPProvider(rpc_url))
-        logger.info(f"🌐 Connected to Web3: {self.w3.is_connected()}")
+        Args:
+            network: Network name ('sepolia' or 'mumbai')
+            rpc_url: Custom RPC URL (overrides network config)
+        """
+        self.network = network.lower() if network else 'sepolia'
+        
+        # Use custom RPC URL or get from network config
+        if rpc_url:
+            self.rpc_url = rpc_url
+        elif self.network in self.NETWORKS:
+            self.rpc_url = self.NETWORKS[self.network]['rpc_url']
+        else:
+            logger.warning(f"Unknown network '{self.network}', defaulting to Sepolia")
+            self.network = 'sepolia'
+            self.rpc_url = self.NETWORKS['sepolia']['rpc_url']
+        
+        self.w3 = Web3(Web3.HTTPProvider(self.rpc_url))
+        logger.info(f"🌐 Connected to {self.NETWORKS.get(self.network, {}).get('name', 'Unknown')}: {self.w3.is_connected()}")
     
     def get_incoming_transactions(self, address: str, from_block: int = 0, to_block: str = "latest") -> List[Dict]:
         """
@@ -75,6 +105,7 @@ class TransactionScanner:
                                 receipt = self.w3.eth.get_transaction_receipt(tx.hash)
                                 
                                 if receipt.status == 1:  # Successful transaction
+                                    currency = self.NETWORKS.get(self.network, {}).get('currency', 'ETH')
                                     incoming_txs.append({
                                         'tx_hash': tx.hash.hex(),
                                         'from_address': tx['from'],
@@ -87,7 +118,7 @@ class TransactionScanner:
                                         'confirmations': current_block - tx.blockNumber
                                     })
                                     
-                                    logger.info(f"  💰 Found deposit: {tx.value / 10**18} ETH in block {tx.blockNumber}")
+                                    logger.info(f"  💰 Found deposit: {tx.value / 10**18} {currency} in block {tx.blockNumber}")
                     
                     except Exception as e:
                         logger.debug(f"Error checking block {block_num}: {e}")
