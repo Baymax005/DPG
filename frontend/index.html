@@ -132,11 +132,45 @@
 
     <!-- Dashboard -->
     <div id="dashboardPage" class="hidden container mx-auto px-4 py-8">
-        <!-- User Info -->
+        <!-- User Info & Network Switcher -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-2">
-                <i class="fas fa-user-circle mr-2"></i>Welcome, <span id="userEmail"></span>
-            </h3>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-user-circle mr-2"></i>Welcome, <span id="userEmail"></span>
+                    </h3>
+                </div>
+                
+                <!-- Network Switcher -->
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-semibold text-gray-600">Network:</span>
+                    <div class="relative inline-block">
+                        <select id="networkSelector" onchange="switchNetwork()" 
+                                class="appearance-none bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 pr-8 rounded-lg font-semibold cursor-pointer hover:from-purple-600 hover:to-blue-600 transition-all shadow-md">
+                            <option value="sepolia">🔵 Sepolia (ETH)</option>
+                            <option value="mumbai">🟣 Mumbai (MATIC)</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                    <div id="networkStatus" class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span class="text-xs text-gray-600 font-medium">Connected</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Network Info Banner -->
+            <div id="networkInfoBanner" class="mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+                <div class="flex items-start gap-2">
+                    <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                    <div class="text-sm">
+                        <p class="font-semibold text-blue-800" id="networkName">Sepolia Testnet</p>
+                        <p class="text-blue-700 text-xs" id="networkDescription">Ethereum testnet - Use for ETH transactions</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Wallets Section -->
