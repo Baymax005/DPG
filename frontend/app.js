@@ -1277,54 +1277,113 @@ async function exportPrivateKey(walletId) {
 // Show private key in a secure modal
 function showPrivateKeyModal(data) {
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
     modal.innerHTML = `
-        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+        <div class="bg-white rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="mb-4">
-                <h3 class="text-xl font-bold text-red-600 mb-2">⚠️ PRIVATE KEY - KEEP SECURE!</h3>
+                <h3 class="text-2xl font-bold text-red-600 mb-2">🔑 PRIVATE KEY EXPORT</h3>
                 <p class="text-sm text-gray-600">
-                    This is your private key. Anyone with this key has full control of your wallet.
+                    ${data.currency} Wallet on ${data.network || 'Blockchain'}
                 </p>
             </div>
             
-            <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-4">
-                <p class="font-bold text-yellow-800 mb-2">🔐 Security Warnings:</p>
-                <ul class="text-sm text-yellow-800 list-disc list-inside space-y-1">
-                    <li>NEVER share this key with anyone</li>
-                    <li>NEVER enter it on untrusted websites</li>
-                    <li>Store it in a secure password manager</li>
-                    <li>Write it down and keep in a safe place</li>
-                    <li>Delete any screenshots after securing the key</li>
+            <!-- Critical Warnings -->
+            <div class="bg-red-50 border-2 border-red-400 rounded-lg p-4 mb-4">
+                <p class="font-bold text-red-800 mb-2">⚠️ CRITICAL SECURITY WARNINGS:</p>
+                <ul class="text-sm text-red-700 list-disc list-inside space-y-1">
+                    ${data.warnings ? data.warnings.map(w => `<li>${w}</li>`).join('') : `
+                        <li>⚠️ NEVER share your private key with anyone!</li>
+                        <li>🔐 Store this key in a secure, offline location</li>
+                        <li>💰 Anyone with this key has full control of your wallet</li>
+                        <li>🚫 DPG support will NEVER ask for your private key</li>
+                        <li>📱 Use this to import into MetaMask or other wallets</li>
+                    `}
                 </ul>
             </div>
             
+            <!-- Network Info -->
+            ${data.network ? `
+            <div class="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-4">
+                <p class="font-bold text-blue-800 mb-2">🌐 Network Information:</p>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                        <span class="text-gray-600">Network:</span>
+                        <span class="font-semibold text-blue-900 ml-2">${data.network}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Chain ID:</span>
+                        <span class="font-semibold text-blue-900 ml-2">${data.chain_id || 'N/A'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Balance:</span>
+                        <span class="font-semibold text-blue-900 ml-2">${data.balance} ${data.currency}</span>
+                    </div>
+                    ${data.explorer_url ? `
+                    <div>
+                        <a href="${data.explorer_url}/address/${data.address}" target="_blank" 
+                           class="text-blue-600 hover:text-blue-800 underline">
+                            View on Explorer →
+                        </a>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            ` : ''}
+            
+            <!-- Wallet Address -->
             <div class="mb-4">
-                <label class="block text-sm font-bold mb-2">Wallet Address:</label>
-                <div class="bg-gray-100 p-3 rounded font-mono text-sm break-all">
-                    ${data.address}
+                <label class="block text-sm font-bold mb-2 text-gray-700">📫 Wallet Address:</label>
+                <div class="bg-gray-100 p-3 rounded font-mono text-sm break-all border border-gray-300 relative group">
+                    <span>${data.address}</span>
+                    <button onclick="copyToClipboard('${data.address}', 'Address copied!')" 
+                            class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-xs hover:bg-gray-200 border border-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                        📋 Copy
+                    </button>
                 </div>
             </div>
             
+            <!-- Private Key -->
             <div class="mb-4">
-                <label class="block text-sm font-bold mb-2">Private Key:</label>
-                <div class="bg-gray-100 p-3 rounded font-mono text-sm break-all relative">
-                    <span id="privateKeyText">${data.private_key}</span>
+                <label class="block text-sm font-bold mb-2 text-gray-700">🔐 Private Key:</label>
+                <div class="bg-yellow-50 p-4 rounded font-mono text-sm break-all border-2 border-yellow-400 relative">
+                    <div class="absolute top-2 right-2 bg-yellow-200 px-2 py-1 rounded text-xs font-bold text-yellow-900 border border-yellow-500">
+                        SECRET
+                    </div>
+                    <span id="privateKeyText" class="pr-20">${data.private_key}</span>
                 </div>
             </div>
             
-            <div class="flex gap-2">
+            <!-- Import Instructions -->
+            <div class="bg-green-50 border border-green-300 rounded-lg p-4 mb-4">
+                <p class="font-bold text-green-800 mb-2">📱 How to Import to MetaMask:</p>
+                <ol class="text-sm text-green-700 list-decimal list-inside space-y-1">
+                    <li>Open MetaMask and click your account icon</li>
+                    <li>Select "Import Account"</li>
+                    <li>Paste your private key</li>
+                    <li>Make sure you're on the correct network: <strong>${data.network || 'Testnet'}</strong></li>
+                </ol>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-2">
                 <button onclick="copyPrivateKey('${data.private_key}')" 
-                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
+                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded font-semibold transition-colors">
                     📋 Copy Private Key
                 </button>
+                <button onclick="downloadWalletBackup(${JSON.stringify(data).replace(/"/g, '&quot;')})" 
+                        class="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded font-semibold transition-colors">
+                    💾 Download Backup
+                </button>
                 <button onclick="closePrivateKeyModal()" 
-                        class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded">
-                    Close
+                        class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-4 rounded font-semibold transition-colors">
+                    ✕ Close
                 </button>
             </div>
             
+            <!-- Export Timestamp -->
             <div class="mt-4 text-xs text-gray-500 text-center">
-                Make sure to save this key before closing this window!
+                Exported: ${data.export_timestamp || new Date().toISOString()}<br>
+                <span class="text-red-600 font-semibold">⚠️ Make sure to save this key before closing!</span>
             </div>
         </div>
     `;
@@ -1335,7 +1394,10 @@ function showPrivateKeyModal(data) {
     // Close on background click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-            closePrivateKeyModal();
+            const confirmClose = confirm('⚠️ Have you saved your private key?\n\nOnce you close this window, you\'ll need to export again.');
+            if (confirmClose) {
+                closePrivateKeyModal();
+            }
         }
     });
 }
@@ -1356,6 +1418,60 @@ function closePrivateKeyModal() {
     if (modal) {
         modal.remove();
     }
+}
+
+// Download wallet backup as JSON file
+function downloadWalletBackup(data) {
+    try {
+        // Create backup object with all relevant info
+        const backup = {
+            wallet_id: data.wallet_id,
+            currency: data.currency,
+            network: data.network || 'Unknown',
+            chain_id: data.chain_id,
+            address: data.address,
+            private_key: data.private_key,
+            balance: data.balance,
+            export_date: data.export_timestamp || new Date().toISOString(),
+            warnings: [
+                "⚠️ NEVER share this file with anyone!",
+                "🔐 Store this file in a secure, encrypted location",
+                "💰 Anyone with access to this file can control your wallet",
+                "📱 This file can be used to import your wallet into MetaMask or other wallets"
+            ]
+        };
+        
+        // Convert to JSON
+        const jsonContent = JSON.stringify(backup, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `DPG_${data.currency}_Wallet_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        alert('✅ Wallet backup downloaded!\n\n⚠️ Store this file securely and never share it with anyone.');
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('❌ Failed to download backup file');
+    }
+}
+
+// Copy to clipboard helper function
+function copyToClipboard(text, successMessage = 'Copied!') {
+    navigator.clipboard.writeText(text).then(() => {
+        alert(`✅ ${successMessage}`);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('❌ Failed to copy. Please select and copy manually.');
+    });
 }
 
 // Delete wallet

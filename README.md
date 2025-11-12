@@ -3,7 +3,7 @@
 **A modern payment gateway bridging traditional finance with cryptocurrency**
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready%20(Testnet)-brightgreen)
-![Version](https://img.shields.io/badge/Version-0.2.1--Beta-blue)
+![Version](https://img.shields.io/badge/Version-0.2.3--Beta-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.120.0-009688)
 
@@ -65,22 +65,25 @@ DPG has its own native utility token ($DPG) providing:
 - **Fiat:** USD
 - **Crypto:** ETH, MATIC, USDT, USDC
 - **Import existing wallets** (MetaMask, Trust Wallet, etc.)
+- **Export wallets** with comprehensive backup (private key + JSON download)
 - **Real blockchain integration** with Web3.py 7.14.0
+- **Multi-Network Support:** Sepolia (ETH), Mumbai (MATIC)
 - **Enterprise-grade encryption** (PBKDF2 + Fernet)
-- **Sync balance from blockchain** (Sepolia testnet)
+- **Sync balance from blockchain** (Sepolia/Mumbai testnet)
 - Wallet creation/deletion
 - Delete empty wallets
 - **Precise balance display** (0.001 shows correctly, not 0.00)
 
-#### Blockchain Transactions (NEW v0.2.1 🔥)
-- **Real crypto sends** on Sepolia testnet (ETH, MATIC)
+#### Blockchain Transactions (v0.2.1-0.2.3 🔥)
+- **Multi-Network Support:** Sepolia (ETH), Mumbai (MATIC), Polygon mainnet ready
+- **Real crypto sends** on testnets (ETH, MATIC)
 - **Fixed nonce errors** (uses 'pending' nonce, no more conflicts)
 - **20% gas price buffer** (prevents "underpriced" errors)
 - **Rate limiting** (blocks rapid-fire transactions)
 - **Auto-status updates** (pending → completed in 10-15 seconds)
 - Gas fee estimation before sending
 - Transaction hash tracking
-- Etherscan verification links
+- Etherscan/Polygonscan verification links
 - User's wallet private key signing (not master wallet)
 - Address validation (checksum addresses)
 
@@ -105,6 +108,15 @@ DPG has its own native utility token ($DPG) providing:
 - Real-time transaction history
 - Form validation & error handling
 - Enter key support
+
+#### Wallet Management (NEW v0.2.3 🔥)
+- **Export Wallet Feature:** Securely export private keys with warnings
+- **Download Backup:** JSON file with complete wallet information  
+- **Network Information:** Shows Sepolia/Mumbai network details
+- **MetaMask Integration:** Instructions for importing to MetaMask
+- **Explorer Links:** Direct links to Etherscan/Polygonscan
+- **Security Warnings:** 5 critical warnings before export
+- **Backup Timestamp:** Track when wallets were exported
 
 #### Proof of Reserves (NEW v0.2.2 🔥)
 - **Full Transparency:** Public API for verifying platform reserves
@@ -538,12 +550,22 @@ python db_dashboard.py
 - [x] **Reserve Configuration** (easy wallet management via config file)
 - [x] **Production Documentation** (complete deployment guide)
 
-### 🚧 Phase 3: Advanced Features (Nov 4-8, 2025) - IN PROGRESS
-- [ ] Export wallet feature (show private key securely)
+### ✅ Phase 2.3: Multi-Chain & Export (Nov 13, 2025) - COMPLETE
+- [x] **Polygon/Mumbai Support** (MATIC transactions on testnet)
+- [x] **Export Wallet Feature** (secure private key export with warnings)
+- [x] **Download Backup** (JSON file with wallet information)
+- [x] **Network Switching** (Sepolia and Mumbai testnet support)
+- [x] **Polygonscan Integration** (transaction verification)
+- [x] **MetaMask Import Guide** (instructions for wallet migration)
+
+### 🚧 Phase 3: Advanced Features (Nov 13-20, 2025) - IN PROGRESS
+- [x] ~~Export wallet feature~~ ✅ COMPLETED (Nov 13)
+- [x] ~~Polygon Mumbai testnet~~ ✅ COMPLETED (Nov 13)
 - [ ] ERC-20 token support (USDT, USDC on-chain)
-- [ ] Polygon Mumbai testnet
 - [ ] Email verification (SendGrid)
 - [ ] UI improvements (loading, animations)
+- [ ] Wallet QR code display
+- [ ] Price charts integration
 
 ### 📋 Phase 4: Premium Features (Nov 8-22, 2025)
 - [ ] Multi-currency swap (DEX integration)
@@ -569,17 +591,17 @@ python db_dashboard.py
 
 ## 📊 Current Status
 
-**Version:** 0.2.2-Beta  
-**Major Milestone:** ✅ Transparent & Auditable Platform!  
-**Completion:** 60% overall  
+**Version:** 0.2.3-Beta  
+**Major Milestone:** ✅ Multi-Chain Support & Export Wallet!  
+**Completion:** 65% overall  
 
-### Latest Achievements (Nov 5, 2025) 🔥
-- ✅ **Proof of Reserves System** (Merkle trees + on-chain verification + solvency ratios)
-- ✅ **Transaction Receipts with DPG Branding** (elegant design, QR codes, print functionality)
-- ✅ **Reserve Wallet Configuration** (centralized config file, environment override support)
-- ✅ **Production Deployment Guide** (comprehensive DEPLOYMENT.md with security best practices)
-- ✅ **Public Transparency API** (anyone can verify reserves on blockchain)
-- ✅ **Audit Dashboard** (beautiful UI showing full financial transparency)
+### Latest Achievements (Nov 13, 2025) 🔥
+- ✅ **Polygon/Mumbai Testnet Support** (MATIC transactions fully working)
+- ✅ **Enhanced Export Wallet** (comprehensive security warnings + network info)
+- ✅ **Download Backup Feature** (JSON file export for wallet backup)
+- ✅ **MetaMask Integration Guide** (easy migration instructions)
+- ✅ **Multi-Network Support** (Sepolia + Mumbai testnets active)
+- ✅ **Polygonscan Integration** (transaction verification links)
 
 ### Previous Achievements (Nov 3, 2025)
 - ✅ **Fixed all nonce errors** (pending nonce + 20% gas buffer)
@@ -608,10 +630,10 @@ python db_dashboard.py
 ### Components Status
 - ✅ Backend Infrastructure: 100%
 - ✅ Authentication: 100%
-- ✅ Wallets: 95% (import, sync, delete - export coming soon)
-- ✅ Blockchain Integration: 95% (Sepolia production-ready, Mumbai planned)
+- ✅ Wallets: 100% (import, export, sync, delete - full featured!)
+- ✅ Blockchain Integration: 100% (Sepolia + Mumbai production-ready)
 - ✅ Transactions: 95% (send working, auto-status updates, nonce fixed)
-- ✅ Frontend: 90% (auto-refresh working, polish ongoing)
+- ✅ Frontend: 92% (export modal, network switching, polish ongoing)
 - ⏳ Email: 0% (planned)
 - ❌ KYC: 0% (future)
 - ❌ Trading: 0% (future)
@@ -727,9 +749,9 @@ This project is open source for educational and portfolio purposes. Commercial u
 
 ---
 
-**Last Updated:** November 5, 2025 (v0.2.2 - Fully Transparent & Production-Ready Docs! 🔥)  
+**Last Updated:** November 13, 2025 (v0.2.3 - Multi-Chain & Export Ready! 🔥)  
 **Built with:** ❤️ + Python + Web3.py + Cryptography + AI Assistance  
 **Developer:** Muhammad Ali (@baymax005)  
-**Status:** 🟢 Active Development - Transparent, Auditable & Deployment-Ready!
+**Status:** 🟢 Active Development - Multi-Chain, Transparent & Export-Ready!
 
 **Let's revolutionize payments together! 🚀**

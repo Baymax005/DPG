@@ -5,6 +5,7 @@ Handles wallet creation and management endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime
 
 from database import get_db
 from models import User, Wallet, WalletType
@@ -361,8 +362,23 @@ async def export_wallet_private_key(
     """
     Export the private key for a wallet
     
-    ⚠️ WARNING: This is a sensitive operation!
-    Private keys should NEVER be shared and should be stored securely.
+    ⚠️ WARNING: This is a CRITICAL security operation!
+    
+    **Security Warnings:**
+    - Private keys give COMPLETE control of your wallet
+    - NEVER share your private key with anyone
+    - Store it in a secure location (offline/encrypted)
+    - Anyone with this key can steal ALL your funds
+    - DPG staff will NEVER ask for your private key
+    
+    **Use Cases:**
+    - Backup your wallet before deletion
+    - Import into MetaMask or other wallets
+    - Recovery purposes only
+    
+    **Network Support:**
+    - ETH: Compatible with Sepolia testnet
+    - MATIC: Compatible with Mumbai testnet
     """
     wallet = db.query(Wallet).filter(
         Wallet.id == wallet_id,
@@ -372,25 +388,45 @@ async def export_wallet_private_key(
     if not wallet:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Wallet not found"
+            detail="Wallet not found or does not belong to you"
         )
     
     if not wallet.private_key_encrypted:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This wallet doesn't have a private key (fiat wallet or imported without key)"
+            detail="This wallet doesn't have a private key (fiat wallet or no blockchain address)"
         )
     
     try:
         # Decrypt the private key
         private_key = decrypt_private_key(wallet.private_key_encrypted)
         
+        # Get network information
+        network_info = {
+            "ETH": {"network": "Sepolia Testnet", "chain_id": 11155111, "explorer": "https://sepolia.etherscan.io"},
+            "MATIC": {"network": "Mumbai Testnet", "chain_id": 80001, "explorer": "https://mumbai.polygonscan.com"}
+        }
+        
+        network_data = network_info.get(wallet.currency_code, {"network": "Unknown", "chain_id": None, "explorer": None})
+        
         return {
+            "success": True,
             "wallet_id": wallet.id,
             "currency": wallet.currency_code,
             "address": wallet.address,
             "private_key": private_key,
-            "warning": "⚠️ NEVER share your private key with anyone! Anyone with this key has full control of your wallet."
+            "network": network_data["network"],
+            "chain_id": network_data["chain_id"],
+            "explorer_url": network_data["explorer"],
+            "balance": str(wallet.balance),
+            "warnings": [
+                "⚠️ NEVER share your private key with anyone!",
+                "🔐 Store this key in a secure, offline location",
+                "💰 Anyone with this key has full control of your wallet",
+                "🚫 DPG support will NEVER ask for your private key",
+                "📱 Use this to import into MetaMask or other wallets"
+            ],
+            "export_timestamp": str(datetime.utcnow())
         }
     except Exception as e:
         raise HTTPException(
