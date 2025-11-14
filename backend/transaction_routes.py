@@ -640,16 +640,16 @@ async def scan_for_deposits(
         # Get network
         network_map = {
             "ETH": "sepolia",
-            "MATIC": "mumbai"
+            "MATIC": "amoy"
         }
         network = network_map.get(wallet.currency_code, "sepolia")
         
-        # For Mumbai/MATIC, use TransactionScanner instead of Etherscan
-        if network == "mumbai":
-            logger.info(f"🟣 Using TransactionScanner for Mumbai/MATIC deposits")
+        # For Amoy/MATIC, use TransactionScanner instead of Etherscan
+        if network == "amoy":
+            logger.info(f"🟣 Using TransactionScanner for Amoy/MATIC deposits")
             from transaction_scanner import TransactionScanner
             
-            scanner = TransactionScanner(network='mumbai')
+            scanner = TransactionScanner(network='amoy')
             
             # Get the last block we scanned (or start from recent blocks)
             last_tx = db.query(Transaction).filter(
@@ -663,13 +663,13 @@ async def scan_for_deposits(
                 from_block = int(last_tx.block_number) + 1
             
             # Scan blockchain for incoming transactions
-            logger.info(f"🔎 Scanning Mumbai blockchain for MATIC deposits to {wallet.address[:10]}...")
+            logger.info(f"🔎 Scanning Amoy blockchain for MATIC deposits to {wallet.address[:10]}...")
             deposits = scanner.get_incoming_transactions(wallet.address, from_block=from_block)
             logger.info(f"📊 Found {len(deposits)} MATIC deposits from blockchain")
             
             if not deposits:
                 return {
-                    "message": "📭 No incoming MATIC deposits found on Mumbai blockchain",
+                    "message": "📭 No incoming MATIC deposits found on Amoy blockchain",
                     "deposits_found": 0
                 }
             
@@ -693,7 +693,7 @@ async def scan_for_deposits(
                         status=TransactionStatus.COMPLETED,
                         tx_hash=deposit['tx_hash'],
                         description=f"MATIC deposit from {deposit['from_address'][:10]}...",
-                        network='mumbai'
+                        network='amoy'
                     )
                     db.add(tx)
                     
@@ -716,7 +716,7 @@ async def scan_for_deposits(
                 "message": f"✅ Scan complete! Found {len(new_deposits)} new MATIC deposits",
                 "deposits_found": len(new_deposits),
                 "new_deposits": new_deposits,
-                "network": "mumbai"
+                "network": "amoy"
             }
         
         # Get Etherscan service with API key from environment

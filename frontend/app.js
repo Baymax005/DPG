@@ -2199,7 +2199,7 @@ function viewTransactionReceipt(txHash, type, amount, status, date, fee, network
     const explorerMap = {
         'sepolia': `https://sepolia.etherscan.io/tx/${txHash}`,
         'ethereum': `https://etherscan.io/tx/${txHash}`,
-        'mumbai': `https://mumbai.polygonscan.com/tx/${txHash}`,
+        'amoy': `https://amoy.polygonscan.com/tx/${txHash}`,
         'polygon': `https://polygonscan.com/tx/${txHash}`
     };
     
@@ -2300,7 +2300,7 @@ function viewTransactionReceipt(txHash, type, amount, status, date, fee, network
                     <a href="${explorerUrl}" target="_blank" rel="noopener noreferrer"
                        class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg transition-all transform hover:scale-105">
                         <i class="fas fa-external-link-alt"></i>
-                        View on ${normalizedNetwork === 'mumbai' ? 'Polygonscan' : 'Etherscan'}
+                        View on ${normalizedNetwork === 'amoy' ? 'Polygonscan' : 'Etherscan'}
                     </a>
                 </div>
             ` : ''}

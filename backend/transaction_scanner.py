@@ -27,9 +27,9 @@ class TransactionScanner:
             'name': 'Sepolia Testnet',
             'currency': 'ETH'
         },
-        'mumbai': {
-            'rpc_url': os.getenv("MUMBAI_RPC_URL", "https://polygon-mumbai.infura.io/v3/01888b56d7994053a61d869173139fb2"),
-            'name': 'Mumbai Testnet',
+        'amoy': {
+            'rpc_url': os.getenv("AMOY_RPC_URL", "https://polygon-amoy.infura.io/v3/01888b56d7994053a61d869173139fb2"),
+            'name': 'Amoy Testnet',
             'currency': 'MATIC'
         }
     }

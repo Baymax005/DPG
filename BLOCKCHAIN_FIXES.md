@@ -1,7 +1,12 @@
 # Blockchain Integration Fixes
 
-**Date**: November 13, 2025  
-**Commit**: `5f86366`
+**Date**: November 13-14, 2025  
+**Commits**: `5f86366`, `43f775c`
+
+> **⚠️ IMPORTANT UPDATE (Nov 14, 2025):**  
+> Mumbai testnet has been deprecated by Polygon. This document references Mumbai for historical context.  
+> **The system has been migrated to Amoy testnet (Chain ID: 80002).**  
+> All Mumbai references below should be read as Amoy in the current implementation.
 
 ## Issues Fixed
 

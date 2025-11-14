@@ -69,13 +69,13 @@ DPG has its own native utility token ($DPG) providing:
 - **Real blockchain integration** with Web3.py 7.14.0
 - **Multi-Network Support:** Sepolia (ETH), Mumbai (MATIC)
 - **Enterprise-grade encryption** (PBKDF2 + Fernet)
-- **Sync balance from blockchain** (Sepolia/Mumbai testnet)
+- **Sync balance from blockchain** (Sepolia/Amoy testnet)
 - Wallet creation/deletion
 - Delete empty wallets
 - **Precise balance display** (0.001 shows correctly, not 0.00)
 
 #### Blockchain Transactions (v0.2.1-0.2.3 🔥)
-- **Multi-Network Support:** Sepolia (ETH), Mumbai (MATIC), Polygon mainnet ready
+- **Multi-Network Support:** Sepolia (ETH), Amoy (MATIC), Polygon mainnet ready
 - **Real crypto sends** on testnets (ETH, MATIC)
 - **Fixed nonce errors** (uses 'pending' nonce, no more conflicts)
 - **20% gas price buffer** (prevents "underpriced" errors)
@@ -112,7 +112,7 @@ DPG has its own native utility token ($DPG) providing:
 #### Wallet Management (NEW v0.2.3 🔥)
 - **Export Wallet Feature:** Securely export private keys with warnings
 - **Download Backup:** JSON file with complete wallet information  
-- **Network Information:** Shows Sepolia/Mumbai network details
+- **Network Information:** Shows Sepolia/Amoy network details
 - **MetaMask Integration:** Instructions for importing to MetaMask
 - **Explorer Links:** Direct links to Etherscan/Polygonscan
 - **Security Warnings:** 5 critical warnings before export
@@ -140,11 +140,11 @@ DPG has its own native utility token ($DPG) providing:
 ### 🚧 In Progress
 - [ ] Email verification
 - [ ] ERC-20 token on-chain support (currently custodial USDT/USDC)
-- [ ] Polygon Mumbai testnet transactions
+- [ ] Polygon Amoy testnet transactions
 
 ### 📋 Planned Features
 - Mainnet deployment (after security audit)
-- Polygon Mumbai testnet support
+- Polygon Amoy testnet support
 - Multi-currency swap (DEX integration)
 - Stripe payment integration (fiat on-ramp)
 - KYC verification system
@@ -167,7 +167,7 @@ DPG has its own native utility token ($DPG) providing:
 - **Blockchain:** Web3.py 7.14.0, eth-account 0.13.7
 - **Encryption:** cryptography 46.0.3 (Fernet)
 - **RPC Provider:** Infura (Sepolia testnet)
-- **Networks:** Ethereum Sepolia, Polygon Mumbai (planned)
+- **Networks:** Ethereum Sepolia, Polygon Amoy (testnet)
 
 ### Frontend
 - **HTML5 + Vanilla JavaScript**
@@ -228,7 +228,7 @@ WALLET_ENCRYPTION_KEY=your-32-byte-fernet-key-here
 # Blockchain (Infura)
 INFURA_API_KEY=your-infura-api-key
 SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/your-infura-api-key
-MUMBAI_RPC_URL=https://polygon-mumbai.infura.io/v3/your-infura-api-key
+AMOY_RPC_URL=https://polygon-amoy.infura.io/v3/your-infura-api-key
 ```
 
 4. **Start Server:**
@@ -551,16 +551,16 @@ python db_dashboard.py
 - [x] **Production Documentation** (complete deployment guide)
 
 ### ✅ Phase 2.3: Multi-Chain & Export (Nov 13, 2025) - COMPLETE
-- [x] **Polygon/Mumbai Support** (MATIC transactions on testnet)
+- [x] **Polygon/Amoy Support** (MATIC transactions on testnet)
 - [x] **Export Wallet Feature** (secure private key export with warnings)
 - [x] **Download Backup** (JSON file with wallet information)
-- [x] **Network Switching** (Sepolia and Mumbai testnet support)
+- [x] **Network Switching** (Sepolia and Amoy testnet support)
 - [x] **Polygonscan Integration** (transaction verification)
 - [x] **MetaMask Import Guide** (instructions for wallet migration)
 
 ### 🚧 Phase 3: Advanced Features (Nov 13-20, 2025) - IN PROGRESS
 - [x] ~~Export wallet feature~~ ✅ COMPLETED (Nov 13)
-- [x] ~~Polygon Mumbai testnet~~ ✅ COMPLETED (Nov 13)
+- [x] ~~Polygon Amoy testnet~~ ✅ COMPLETED (Nov 14, 2025)
 - [ ] ERC-20 token support (USDT, USDC on-chain)
 - [ ] Email verification (SendGrid)
 - [ ] UI improvements (loading, animations)
@@ -596,11 +596,11 @@ python db_dashboard.py
 **Completion:** 65% overall  
 
 ### Latest Achievements (Nov 13, 2025) 🔥
-- ✅ **Polygon/Mumbai Testnet Support** (MATIC transactions fully working)
+- ✅ **Polygon/Amoy Testnet Support** (MATIC transactions fully working)
 - ✅ **Enhanced Export Wallet** (comprehensive security warnings + network info)
 - ✅ **Download Backup Feature** (JSON file export for wallet backup)
 - ✅ **MetaMask Integration Guide** (easy migration instructions)
-- ✅ **Multi-Network Support** (Sepolia + Mumbai testnets active)
+- ✅ **Multi-Network Support** (Sepolia + Amoy testnets active)
 - ✅ **Polygonscan Integration** (transaction verification links)
 
 ### Previous Achievements (Nov 3, 2025)
@@ -631,7 +631,7 @@ python db_dashboard.py
 - ✅ Backend Infrastructure: 100%
 - ✅ Authentication: 100%
 - ✅ Wallets: 100% (import, export, sync, delete - full featured!)
-- ✅ Blockchain Integration: 100% (Sepolia + Mumbai production-ready)
+- ✅ Blockchain Integration: 100% (Sepolia + Amoy production-ready)
 - ✅ Transactions: 95% (send working, auto-status updates, nonce fixed)
 - ✅ Frontend: 92% (export modal, network switching, polish ongoing)
 - ⏳ Email: 0% (planned)

@@ -35,11 +35,11 @@ class BlockchainService:
             'explorer': 'https://etherscan.io',
             'name': 'Ethereum Mainnet'
         },
-        'mumbai': {
-            'rpc_url': os.getenv('MUMBAI_RPC_URL', 'https://polygon-mumbai.infura.io/v3/YOUR_INFURA_KEY'),
-            'chain_id': 80001,
-            'explorer': 'https://mumbai.polygonscan.com',
-            'name': 'Polygon Mumbai Testnet'
+        'amoy': {
+            'rpc_url': os.getenv('AMOY_RPC_URL', 'https://polygon-amoy.infura.io/v3/YOUR_INFURA_KEY'),
+            'chain_id': 80002,
+            'explorer': 'https://amoy.polygonscan.com',
+            'name': 'Polygon Amoy Testnet'
         },
         'polygon': {
             'rpc_url': os.getenv('POLYGON_RPC_URL', 'https://polygon-mainnet.infura.io/v3/YOUR_INFURA_KEY'),
