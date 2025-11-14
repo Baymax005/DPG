@@ -54,7 +54,7 @@ class BlockchainService:
         Initialize blockchain service
         
         Args:
-            network: Network name (sepolia, ethereum, mumbai, polygon)
+            network: Network name (sepolia, ethereum, amoy, polygon)
         """
         if network not in self.NETWORKS:
             raise ValueError(f"Unsupported network: {network}. Supported: {list(self.NETWORKS.keys())}")

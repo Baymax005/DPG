@@ -140,7 +140,7 @@ class SendRequest(BaseModel):
     wallet_id: str
     to_address: str = Field(..., min_length=26, max_length=64)
     amount: float = Field(..., gt=0)
-    network: str = Field(..., pattern="^(sepolia|mumbai|ethereum|polygon)$")
+    network: str = Field(..., pattern="^(sepolia|amoy|ethereum|polygon)$")
     description: Optional[str] = None
     
     @field_validator('to_address')

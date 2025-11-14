@@ -113,7 +113,7 @@ class TransactionMonitor:
                     # Determine network from currency
                     network_map = {
                         "ETH": "sepolia",
-                        "MATIC": "mumbai"
+                        "MATIC": "amoy"
                     }
                     network = network_map.get(wallet.currency_code, "sepolia")
                     

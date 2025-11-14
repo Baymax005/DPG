@@ -3,7 +3,14 @@ const API_URL = 'http://localhost:9000';
 let authToken = localStorage.getItem('dpg_token');
 let currentUser = null;
 let wallets = [];
-let currentNetwork = localStorage.getItem('dpg_network') || 'sepolia'; // Default to Sepolia
+
+// Initialize network - if old Mumbai value exists, replace with Sepolia
+let savedNetwork = localStorage.getItem('dpg_network');
+if (savedNetwork === 'mumbai' || !savedNetwork || !['sepolia', 'amoy'].includes(savedNetwork)) {
+    savedNetwork = 'sepolia';
+    localStorage.setItem('dpg_network', 'sepolia');
+}
+let currentNetwork = savedNetwork;
 
 // ============================================
 // NETWORK MANAGEMENT
@@ -26,17 +33,17 @@ const NETWORKS = {
             'https://faucet.sepolia.dev/'
         ]
     },
-    mumbai: {
-        name: 'Mumbai Testnet',
+    amoy: {
+        name: 'Amoy Testnet',
         description: 'Polygon testnet - Use for MATIC transactions',
         currency: 'MATIC',
-        chainId: 80001,
-        explorer: 'https://mumbai.polygonscan.com',
+        chainId: 80002,
+        explorer: 'https://amoy.polygonscan.com',
         color: 'purple',
         emoji: '🟣',
         faucets: [
-            'https://mumbaifaucet.com/',
-            'https://faucet.polygon.technology/'
+            'https://faucet.polygon.technology/',
+            'https://www.alchemy.com/faucets/polygon-amoy'
         ]
     }
 };
@@ -88,6 +95,7 @@ function switchNetwork() {
  */
 function updateNetworkDisplay() {
     const networkInfo = NETWORKS[currentNetwork];
+    if (!networkInfo) return; // Safety check
     
     // Update banner
     const banner = document.getElementById('networkInfoBanner');
@@ -95,20 +103,24 @@ function updateNetworkDisplay() {
     const descEl = document.getElementById('networkDescription');
     
     if (banner && nameEl && descEl) {
-        // Update colors
-        banner.className = `mt-4 bg-${networkInfo.color}-50 border-l-4 border-${networkInfo.color}-500 p-3 rounded`;
+        // Use fixed Tailwind classes based on network
+        if (currentNetwork === 'sepolia') {
+            banner.className = 'mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded';
+            nameEl.className = 'font-semibold text-blue-800';
+            descEl.className = 'text-blue-700 text-xs';
+            const icon = banner.querySelector('.fa-info-circle');
+            if (icon) icon.className = 'fas fa-info-circle text-blue-500 mt-0.5';
+        } else if (currentNetwork === 'amoy') {
+            banner.className = 'mt-4 bg-purple-50 border-l-4 border-purple-500 p-3 rounded';
+            nameEl.className = 'font-semibold text-purple-800';
+            descEl.className = 'text-purple-700 text-xs';
+            const icon = banner.querySelector('.fa-info-circle');
+            if (icon) icon.className = 'fas fa-info-circle text-purple-500 mt-0.5';
+        }
         
         // Update text
         nameEl.textContent = networkInfo.name;
-        nameEl.className = `font-semibold text-${networkInfo.color}-800`;
         descEl.textContent = networkInfo.description;
-        descEl.className = `text-${networkInfo.color}-700 text-xs`;
-        
-        // Update icon color
-        const icon = banner.querySelector('.fa-info-circle');
-        if (icon) {
-            icon.className = `fas fa-info-circle text-${networkInfo.color}-500 mt-0.5`;
-        }
     }
     
     // Update selector
@@ -143,7 +155,7 @@ function getCurrentNetwork() {
  */
 function getNetworkForCurrency(currency) {
     if (currency === 'ETH') return 'sepolia';
-    if (currency === 'MATIC') return 'mumbai';
+    if (currency === 'MATIC') return 'amoy';
     return currentNetwork; // Default to current
 }
 
@@ -546,29 +558,36 @@ function displayWallets() {
     }
     
     const selectedNetwork = getCurrentNetwork();
+    console.log('🔍 Display Wallets Debug:', {
+        selectedNetwork,
+        totalWallets: wallets.length,
+        walletCurrencies: wallets.map(w => w.currency_code)
+    });
     
-    container.innerHTML = wallets.map(wallet => {
+    // Filter wallets to only show those matching the current network
+    const filteredWallets = wallets.filter(wallet => {
+        const walletNetwork = getNetworkForCurrency(wallet.currency_code);
+        console.log(`Wallet ${wallet.currency_code} -> network: ${walletNetwork}, matches ${selectedNetwork}: ${walletNetwork === selectedNetwork}`);
+        return walletNetwork === selectedNetwork;
+    });
+    
+    // If no wallets for current network, show message
+    if (filteredWallets.length === 0) {
+        container.innerHTML = `<p class="text-gray-500">No ${NETWORKS[selectedNetwork]?.currency || ''} wallets yet. Create one to get started!</p>`;
+        return;
+    }
+    
+    container.innerHTML = filteredWallets.map(wallet => {
         // Use crypto formatting for crypto wallets, fiat formatting for USD
         const isCrypto = wallet.wallet_type === 'crypto' || wallet.currency_code !== 'USD';
         const formattedBalance = isCrypto ? formatCrypto(wallet.balance, 8) : formatFiat(wallet.balance);
         
-        // Check if wallet matches current network
-        const walletNetwork = getNetworkForCurrency(wallet.currency_code);
-        const isActiveNetwork = walletNetwork === selectedNetwork;
-        const networkBadge = isActiveNetwork 
-            ? `<span class="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">✓ Active Network</span>`
-            : `<span class="inline-block px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100 rounded-full">${NETWORKS[walletNetwork]?.name || 'Other'}</span>`;
-        
-        // Apply opacity for non-active networks
-        const cardOpacity = isActiveNetwork ? '' : 'opacity-60';
-        
         return `
-        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition ${cardOpacity}">
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
             <div class="flex justify-between items-center mb-2">
                 <div class="flex-1">
                     <div class="flex items-center gap-2 mb-1">
                         <h4 class="font-bold text-lg">${wallet.currency_code}</h4>
-                        ${wallet.wallet_type === 'crypto' ? networkBadge : ''}
                     </div>
                     <p class="text-sm text-gray-500">${wallet.wallet_type}</p>
                     ${wallet.address ? `<p class="text-xs text-gray-400 mt-1 font-mono">${shortenAddress(wallet.address, 15, 8)}</p>` : ''}
@@ -1819,7 +1838,7 @@ function displayReceiveAddress() {
     // Set network warning
     const networkMap = {
         'ETH': 'Ethereum (Sepolia Testnet)',
-        'MATIC': 'Polygon (Mumbai Testnet)',
+        'MATIC': 'Polygon (Amoy Testnet)',
         'USDT': 'USDT on Ethereum network',
         'USDC': 'USDC on Ethereum network'
     };

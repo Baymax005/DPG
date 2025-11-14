@@ -141,7 +141,7 @@ async def import_wallet(
         
         # Get blockchain balance
         from blockchain_service import get_blockchain_service
-        network_map = {"ETH": "sepolia", "MATIC": "mumbai"}
+        network_map = {"ETH": "sepolia", "MATIC": "amoy"}
         network = network_map.get(currency_code, "sepolia")
         blockchain = get_blockchain_service(network)
         balance = blockchain.get_balance(public_address)
@@ -332,7 +332,7 @@ async def sync_wallet_from_blockchain(
     # Map currency to network
     network_map = {
         "ETH": "sepolia",  # Use testnet for testing
-        "MATIC": "mumbai"
+        "MATIC": "amoy"  # Updated to Amoy testnet
     }
     network = network_map.get(wallet.currency_code, "sepolia")
     
@@ -378,7 +378,7 @@ async def export_wallet_private_key(
     
     **Network Support:**
     - ETH: Compatible with Sepolia testnet
-    - MATIC: Compatible with Mumbai testnet
+    - MATIC: Compatible with Amoy testnet
     """
     wallet = db.query(Wallet).filter(
         Wallet.id == wallet_id,
@@ -404,7 +404,7 @@ async def export_wallet_private_key(
         # Get network information
         network_info = {
             "ETH": {"network": "Sepolia Testnet", "chain_id": 11155111, "explorer": "https://sepolia.etherscan.io"},
-            "MATIC": {"network": "Mumbai Testnet", "chain_id": 80001, "explorer": "https://mumbai.polygonscan.com"}
+            "MATIC": {"network": "Amoy Testnet", "chain_id": 80002, "explorer": "https://amoy.polygonscan.com"}
         }
         
         network_data = network_info.get(wallet.currency_code, {"network": "Unknown", "chain_id": None, "explorer": None})

@@ -200,7 +200,7 @@ async def send_to_address(
     - **wallet_id**: Source wallet ID
     - **to_address**: Destination blockchain address
     - **amount**: Amount to send
-    - **network**: Blockchain network (sepolia, mumbai, ethereum, polygon)
+    - **network**: Blockchain network (sepolia, amoy, ethereum, polygon)
     - **description**: Optional description
     
     ⚠️ This sends REAL blockchain transactions on testnet/mainnet
@@ -432,7 +432,7 @@ async def check_transaction_status(
     Check blockchain transaction status
     
     - **tx_hash**: Transaction hash to check
-    - **network**: Blockchain network (sepolia, ethereum, polygon, mumbai)
+    - **network**: Blockchain network (sepolia, ethereum, polygon, amoy)
     
     Returns real-time status from blockchain explorer
     """

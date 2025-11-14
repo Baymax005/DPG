@@ -1,7 +1,7 @@
 """
 Transaction Scanner using Infura RPC
 Scans blockchain for incoming ETH/MATIC transfers using eth_getLogs
-Supports multiple networks: Sepolia (ETH), Mumbai (MATIC)
+Supports multiple networks: Sepolia (ETH), Amoy (MATIC)
 """
 from web3 import Web3
 import logging
@@ -39,7 +39,7 @@ class TransactionScanner:
         Initialize scanner with Web3 provider
         
         Args:
-            network: Network name ('sepolia' or 'mumbai')
+            network: Network name ('sepolia' or 'amoy')
             rpc_url: Custom RPC URL (overrides network config)
         """
         self.network = network.lower() if network else 'sepolia'
