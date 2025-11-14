@@ -158,10 +158,10 @@ Wallet Cards:
 ### Polygon Integration 🟣
 **Deadline:** Nov 8, 2025
 
-- [ ] Add Mumbai testnet support (already in code, needs testing)
-- [ ] Test MATIC sends on Mumbai
+- [x] Add Amoy testnet support (migrated from Mumbai) ✅
+- [x] Test MATIC sends on Amoy ✅
 - [ ] Add cross-chain bridge research
-- [ ] Compare gas fees (Sepolia vs Mumbai)
+- [ ] Compare gas fees (Sepolia vs Amoy)
 - [ ] Document Polygon integration
 
 ### Multi-Currency Swap 🔄
@@ -510,7 +510,7 @@ Frontend:
 #### Blockchain Integration
 - [ ] Set up Infura/Alchemy account
 - [ ] Connect to Sepolia testnet (Ethereum)
-- [ ] Connect to Mumbai testnet (Polygon)
+- [x] Connect to Amoy testnet (Polygon) ✅
 - [ ] Test sending real transactions
 - [ ] Add gas fee estimation
 - [ ] Add transaction confirmation tracking

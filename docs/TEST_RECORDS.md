@@ -512,7 +512,7 @@ Testing Date: Oct 27, 2025
 
 ### Phase 4: Blockchain Integration Testing (Nov 7)
 - [ ] Test Sepolia testnet deposits
-- [ ] Test Mumbai testnet deposits
+- [x] Test Amoy testnet deposits ✅ (Nov 14, 2025)
 - [ ] Test real blockchain withdrawals
 - [ ] Test gas fee estimation
 - [ ] Test transaction confirmation tracking

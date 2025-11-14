@@ -264,7 +264,7 @@ DPG is a **hybrid payment infrastructure** combining:
 - **Hosting:** AWS/GCP (load balanced)
 
 **Blockchain:**
-- **Networks:** Ethereum (Sepolia → Mainnet), Polygon (Mumbai → Mainnet)
+- **Networks:** Ethereum (Sepolia → Mainnet), Polygon (Amoy → Mainnet)
 - **RPC Provider:** Infura (99.9% uptime SLA)
 - **Web3 Library:** Web3.py 7.14.0
 - **Wallet Generation:** eth-account 0.13.7
@@ -1009,7 +1009,7 @@ Business model:
 
 **Milestones:**
 - [ ] ERC-20 token support (USDT, USDC)
-- [ ] Polygon integration (Mumbai → Mainnet)
+- [x] Polygon integration (Amoy → Mainnet) - Testnet Complete ✅
 - [ ] Multi-currency swap
 - [ ] Gas optimization
 - [ ] Transaction status tracking

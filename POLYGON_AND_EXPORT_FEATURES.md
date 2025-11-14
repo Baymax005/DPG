@@ -12,7 +12,7 @@
 #### Backend Improvements (`backend/wallet_routes.py`)
 - ✅ Enhanced `GET /api/v1/wallets/{id}/export-private-key` endpoint
 - ✅ Added comprehensive security warnings (5 critical warnings)
-- ✅ Network information display (Sepolia/Mumbai)
+- ✅ Network information display (Sepolia/Amoy)
 - ✅ Chain ID and explorer URL integration
 - ✅ Export timestamp tracking
 - ✅ Balance display in export
@@ -26,9 +26,9 @@
   "currency": "ETH" or "MATIC",
   "address": "0x...",
   "private_key": "0x...",
-  "network": "Sepolia Testnet" or "Mumbai Testnet",
+  "network": "Sepolia Testnet" or "Amoy Testnet",
   "chain_id": 11155111 or 80001,
-  "explorer_url": "https://sepolia.etherscan.io" or "https://mumbai.polygonscan.com",
+  "explorer_url": "https://sepolia.etherscan.io" or "https://amoy.polygonscan.com",
   "balance": "0.05",
   "warnings": [
     "⚠️ NEVER share your private key with anyone!",
@@ -43,7 +43,7 @@
 
 #### Frontend Improvements (`frontend/app.js`)
 - ✅ Redesigned export modal with comprehensive information
-- ✅ Network-specific details (Sepolia/Mumbai)
+- ✅ Network-specific details (Sepolia/Amoy)
 - ✅ Enhanced security warnings display
 - ✅ **NEW:** Download wallet backup as JSON file
 - ✅ Copy address and private key buttons
@@ -86,7 +86,7 @@ The system ALREADY supports Polygon/Mumbai! Here's what's available:
   - RPC: `https://polygon-mumbai.infura.io/v3/YOUR_KEY`
 
 - ✅ **Transaction Support** (`transaction_routes.py`)
-  - Send MATIC on Mumbai testnet
+  - Send MATIC on Amoy testnet
   - Gas estimation for MATIC transactions
   - Polygonscan integration
 
@@ -98,14 +98,14 @@ The system ALREADY supports Polygon/Mumbai! Here's what's available:
 #### Frontend Support
 - ✅ **Import Modal** (`index.html`)
   - MATIC option in currency dropdown
-  - "MATIC (Polygon - Mumbai Testnet)" label
+  - "MATIC (Polygon - Amoy Testnet)" label
 
 - ✅ **Network Selector** (`app.js`)
-  - Network dropdown shows Mumbai option
+  - Network dropdown shows Amoy option
   - Polygonscan links for MATIC transactions
 
 - ✅ **Transaction Receipts** (`app.js`)
-  - Polygonscan URLs for Mumbai/Polygon
+  - Polygonscan URLs for Amoy/Polygon
   - MATIC network display
 
 ---
@@ -117,8 +117,8 @@ The system ALREADY supports Polygon/Mumbai! Here's what's available:
 Add these to your `.env` file:
 
 ```bash
-# Polygon Mumbai Testnet (for testing)
-MUMBAI_RPC_URL=https://polygon-mumbai.infura.io/v3/YOUR_INFURA_PROJECT_ID
+# Polygon Amoy Testnet (for testing)
+AMOY_RPC_URL=https://polygon-amoy.infura.io/v3/YOUR_INFURA_PROJECT_ID
 
 # Polygon Mainnet (for production)
 POLYGON_RPC_URL=https://polygon-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID
@@ -127,11 +127,11 @@ POLYGON_RPC_URL=https://polygon-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID
 POLYGONSCAN_API_KEY=your_polygonscan_api_key
 ```
 
-### Get Mumbai Testnet MATIC
+### Get Amoy Testnet MATIC
 
-1. **Alchemy Faucet:** https://mumbaifaucet.com/
-2. **Polygon Faucet:** https://faucet.polygon.technology/
-3. **Chainlink Faucet:** https://faucets.chain.link/mumbai
+1. **Polygon Faucet:** https://faucet.polygon.technology/ (Select Amoy)
+2. **Alchemy Faucet:** https://www.alchemy.com/faucets/polygon-amoy
+3. **Official Docs:** https://docs.polygon.technology/
 
 ---
 
@@ -153,21 +153,21 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
    - ✅ "💾 Download Backup" downloads JSON file
    - ✅ Explorer link works
 
-### Test 2: Import MATIC Wallet (Mumbai)
-1. Get a Mumbai testnet wallet with some MATIC
-   - Use MetaMask on Mumbai testnet
+### Test 2: Import MATIC Wallet (Amoy)
+1. Get an Amoy testnet wallet with some MATIC
+   - Use MetaMask on Amoy testnet
    - Get test MATIC from faucet
    - Export private key from MetaMask
 
 2. Import to DPG:
    - Click "Import Wallet"
-   - Select "MATIC (Polygon - Mumbai Testnet)"
+   - Select "MATIC (Polygon - Amoy Testnet)"
    - Paste private key
    - Click "Import Wallet"
 
 3. Verify:
    - ✅ Wallet appears in dashboard
-   - ✅ Balance syncs from Mumbai blockchain
+   - ✅ Balance syncs from Amoy blockchain
    - ✅ Address matches MetaMask
 
 ### Test 3: Send MATIC Transaction
@@ -175,7 +175,7 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
 2. Click "Send Crypto"
 3. Select MATIC wallet
 4. Enter recipient address
-5. Select "mumbai" network
+5. Select "amoy" network
 6. Enter amount (e.g., 0.01 MATIC)
 7. Click "Send"
 
@@ -190,9 +190,9 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
 1. Find MATIC wallet in dashboard
 2. Click "🔑 Export" button
 3. Verify:
-   - ✅ Network shows "Mumbai Testnet"
-   - ✅ Chain ID: 80001
-   - ✅ Explorer: mumbai.polygonscan.com
+   - ✅ Network shows "Amoy Testnet"
+   - ✅ Chain ID: 80002
+   - ✅ Explorer: amoy.polygonscan.com
    - ✅ Can download backup file
    - ✅ Can copy private key
 
@@ -231,7 +231,7 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
 | Network | Status | Chain ID | RPC Support | Explorer | Faucet Available |
 |---------|--------|----------|-------------|----------|------------------|
 | Sepolia (ETH) | ✅ Production | 11155111 | ✅ Infura | sepolia.etherscan.io | ✅ Yes |
-| Mumbai (MATIC) | ✅ Production | 80001 | ✅ Infura | mumbai.polygonscan.com | ✅ Yes |
+| Amoy (MATIC) | ✅ Production | 80002 | ✅ Infura | amoy.polygonscan.com | ✅ Yes |
 | Ethereum Mainnet | ⚠️ Ready (Needs Config) | 1 | ✅ Infura | etherscan.io | N/A |
 | Polygon Mainnet | ⚠️ Ready (Needs Config) | 137 | ✅ Infura | polygonscan.com | N/A |
 
@@ -272,7 +272,7 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
   - Added MetaMask import instructions
 
 ### Configuration Files
-- ℹ️ `.env.example` - Already has MUMBAI_RPC_URL
+- ℹ️ `.env.example` - Now has AMOY_RPC_URL
 
 ---
 
@@ -287,7 +287,7 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
    - Send MATIC transaction
 
 2. ✅ **Verify Polygonscan Links:**
-   - Check Mumbai explorer links work
+   - Check Amoy explorer links work
    - Verify transaction status updates
 
 3. ✅ **Test Backup Restore:**
@@ -307,9 +307,9 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
 ## 📞 Support
 
 **Network Issues?**
-- Check MUMBAI_RPC_URL in .env
-- Verify Infura project has Polygon access
-- Ensure Mumbai faucet gave you test MATIC
+- Check AMOY_RPC_URL in .env
+- Verify Infura project has Polygon Amoy access
+- Ensure Amoy faucet gave you test MATIC (faucet.polygon.technology)
 
 **Export Issues?**
 - Make sure wallet has private key
@@ -326,8 +326,8 @@ POLYGONSCAN_API_KEY=your_polygonscan_api_key
 **🎉 Polygon support is PRODUCTION READY!**  
 **🔑 Export wallet feature is FULLY ENHANCED!**
 
-All features tested and working on testnet. Ready for mainnet after security audit.
+All features tested and working on Amoy testnet. Ready for mainnet after security audit.
 
 **Built by:** Muhammad Ali (@baymax005)  
-**Date:** November 13, 2025  
-**Version:** DPG v0.2.3 - Multi-Chain Ready! 🚀
+**Date:** November 13-14, 2025 (Updated for Amoy)  
+**Version:** DPG v0.2.4 - Multi-Chain Ready! 🚀

@@ -161,7 +161,7 @@ ETH_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
 
 # Alternative variable names (fallback)
 SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
-MUMBAI_RPC_URL=https://polygon-mumbai.infura.io/v3/YOUR_INFURA_KEY
+AMOY_RPC_URL=https://polygon-amoy.infura.io/v3/YOUR_INFURA_KEY
 ```
 
 ### Reserve Wallets
